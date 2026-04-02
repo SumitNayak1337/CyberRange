@@ -2,6 +2,8 @@
 
 A comprehensive security operations center (SOC) lab environment for cybersecurity training and practice. This lab includes vulnerable applications, SIEM tools, and automation scripts for easy deployment and management.
 
+### 📥 [Click Here to Download `Cyberrange.ovf`](cyberrange%20_docs/Cyberrange.ovf)
+
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Features](#features)
@@ -31,22 +33,22 @@ CyberRange is a Docker-based SOC lab environment designed for hands-on cybersecu
 
 Below are screenshots showcasing the CyberRange SOC Lab interface and components:
 
-![Lab Dashboard](cyberrange _docs/Screenshot%202026-03-26%20235835.png)
+![Lab Dashboard](cyberrange%20_docs/Screenshot%202026-03-26%20235835.png)
 *CyberRange SOC Lab Dashboard - Main interface showing all services*
 
-![Service Cards](cyberrange _docs/Screenshot%202026-03-26%20235902.png)
+![Service Cards](cyberrange%20_docs/Screenshot%202026-03-26%20235902.png)
 *Service cards displaying DVWA, Juice Shop, and Splunk with credentials*
 
-![Lab Services](cyberrange _docs/Screenshot%202026-03-26%20235919.png)
+![Lab Services](cyberrange%20_docs/Screenshot%202026-03-26%20235919.png)
 *Detailed view of running lab services and network configuration*
 
-![Dashboard Details](cyberrange _docs/Screenshot%202026-03-26%20235939.png)
+![Dashboard Details](cyberrange%20_docs/Screenshot%202026-03-26%20235939.png)
 *Additional dashboard elements and styling*
 
-![Mobile View](cyberrange _docs/Screenshot%202026-03-27%20000036.png)
+![Mobile View](cyberrange%20_docs/Screenshot%202026-03-27%20000036.png)
 *Responsive dashboard view on mobile devices*
 
-![Service Status](cyberrange _docs/Screenshot%202026-03-27%2000056.png)
+![Service Status](cyberrange%20_docs/Screenshot%202026-03-27%20000056.png)
 *Service status indicators and connection details*
 
 ## 🧩 System Components
@@ -82,7 +84,7 @@ CyberRange consists of the following key components:
 
 The easiest and most reliable way to run CyberRange is to download the pre-configured OVF (Open Virtualization Format) file:
 
-1. **Download the OVF file**: [Cyberrange.ovf](cyberrange _docs/Cyberrange.ovf)
+1. **Download the OVF file**: [Cyberrange.ovf](cyberrange%20_docs/Cyberrange.ovf)
 2. **Import into your virtualization software**:
    - VirtualBox: File → Import Appliance → Select the OVF file
    - VMware: File → Open → Select the OVF file
@@ -100,6 +102,7 @@ The easiest and most reliable way to run CyberRange is to download the pre-confi
    - Alternatively, if using Docker directly, navigate to the `Cyberrange_Programfiles` directory
 7. **Launch the lab** (requires sudo):
    ```bash
+   
    cd /home/cyberrange/192.168.1.11:1337/CyberRange/Cyberrange_Programfiles  # Adjust path if needed
    sudo ./lab-start.sh
    ```
