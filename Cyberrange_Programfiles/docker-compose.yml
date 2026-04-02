@@ -1,0 +1,52 @@
+services:
+
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: cyberrange_dvwa
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: cyberrange_juice
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  splunk:
+    image: splunk/splunk:latest
+    container_name: cyberrange_splunk
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_PASSWORD=CyberRange@123
+      - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
+      - ENABLE_TCP_MODE=true
+      - SPLUNK_HEC_TOKEN=12345678-1234-1234-1234-1234567890ab
+      - SPLUNK_DISPATCH_TTL=10m
+      - SPLUNK_DISPATCH_DIR_REAPER_THREADS=2
+      - SPLUNK_DISPATCH_DIR_REAPER_FREQUENCY=5m
+    ports:
+      - "8000:8000"   # Web UI
+      - "8088:8088"   # HEC
+    volumes:
+      - /var/log:/host_var_log:ro
+      - splunk_data:/opt/splunk/var
+    restart: unless-stopped
+
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: cyberrange_suricata
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command: -i ens33
+    volumes:
+      - /var/log/suricata:/var/log/suricata
+    restart: unless-stopped
+
+volumes:
+  splunk_data:
+
+  
