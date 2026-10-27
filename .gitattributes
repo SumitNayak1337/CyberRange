@@ -1,0 +1,7 @@
+# Ensure shell scripts and service files retain Unix LF line endings
+*.sh text eol=lf
+Cyberrange_Programfiles/cyberrange text eol=lf
+Cyberrange_Programfiles/cyberrange.service text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.html text eol=lf

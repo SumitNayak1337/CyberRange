@@ -1,0 +1,17 @@
+[Unit]
+Description=CyberRange 2.0 SOC Lab Autostart Service
+Documentation=https://github.com/SumitNayak1337/CyberRange
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/cyberrange start --quiet
+ExecStop=/usr/local/bin/cyberrange stop
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

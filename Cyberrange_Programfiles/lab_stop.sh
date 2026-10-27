@@ -1,14 +1,17 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+# ==============================================================================
+#   CyberRange SOC Lab Stopper — CyberRange 2.0 Edition
+# ==============================================================================
 
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo -e "${CYAN}[+] Stopping CyberRange Docker Containers...${NC}"
-docker compose down
+if [[ -f "$SCRIPT_DIR/cyberrange" ]]; then
+    exec "$SCRIPT_DIR/cyberrange" stop "$@"
+elif command -v cyberrange &>/dev/null; then
+    exec cyberrange stop "$@"
+fi
 
-echo -e "${CYAN}[+] Stopping Info Page HTTP Server...${NC}"
-pkill -f "python3 -m http.server 9000" || true
-
-echo -e "${GREEN}âœ… Lab stopped successfully.${NC}"
+# Fallback
+docker compose down 2>/dev/null || docker-compose down 2>/dev/null || true
+pkill -f "python3 -m http.server 9000" 2>/dev/null || true
+echo "Lab stopped."

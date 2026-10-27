@@ -1,0 +1,1076 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#   CYBERRANGE 2.0 // SOC LAB AUTOMATION & MANAGEMENT CLI
+#   Author: CyberRange Team
+#   Version: 2.0 (Elite Edition)
+# ==============================================================================
+
+set -eo pipefail
+
+# --- Color & Style Palette ---
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+RESET='\033[0m'
+
+# Neon & Cyber Colors
+CYAN='\033[0;36m'
+NEON_CYAN='\033[38;5;51m'
+NEON_AQUA='\033[38;5;49m'
+NEON_GREEN='\033[38;5;48m'
+BRIGHT_GREEN='\033[38;5;46m'
+ELECTRIC_GREEN='\033[1;32m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+GOLD='\033[38;5;220m'
+RED='\033[0;31m'
+NEON_RED='\033[38;5;196m'
+MAGENTA='\033[38;5;201m'
+WHITE='\033[1;37m'
+MUTED='\033[38;5;244m'
+DARK_GRAY='\033[38;5;238m'
+
+# --- Path Resolution ---
+resolve_paths() {
+    if [[ -n "${CYBERRANGE_DIR:-}" && -f "$CYBERRANGE_DIR/docker-compose.yml" ]]; then
+        LAB_DIR="$CYBERRANGE_DIR"
+    elif [[ -f "/etc/cyberrange/lab_path" ]] && [[ -f "$(cat /etc/cyberrange/lab_path 2>/dev/null)/docker-compose.yml" ]]; then
+        LAB_DIR="$(cat /etc/cyberrange/lab_path)"
+    else
+        local source="${BASH_SOURCE[0]}"
+        while [ -h "$source" ]; do
+            local dir="$(cd -P "$(dirname "$source")" && pwd)"
+            source="$(readlink "$source")"
+            [[ $source != /* ]] && source="$dir/$source"
+        done
+        local script_dir="$(cd -P "$(dirname "$source")" && pwd)"
+        
+        if [[ -f "$script_dir/docker-compose.yml" ]]; then
+            LAB_DIR="$script_dir"
+        elif [[ -f "$script_dir/Cyberrange_Programfiles/docker-compose.yml" ]]; then
+            LAB_DIR="$script_dir/Cyberrange_Programfiles"
+        elif [[ -f "/home/cyberrange/CyberRange/Cyberrange_Programfiles/docker-compose.yml" ]]; then
+            LAB_DIR="/home/cyberrange/CyberRange/Cyberrange_Programfiles"
+        elif [[ -f "/opt/cyberrange/Cyberrange_Programfiles/docker-compose.yml" ]]; then
+            LAB_DIR="/opt/cyberrange/Cyberrange_Programfiles"
+        elif [[ -f "./docker-compose.yml" ]]; then
+            LAB_DIR="$(pwd)"
+        elif [[ -f "./Cyberrange_Programfiles/docker-compose.yml" ]]; then
+            LAB_DIR="$(pwd)/Cyberrange_Programfiles"
+        else
+            LAB_DIR="/home/cyberrange/CyberRange/Cyberrange_Programfiles"
+        fi
+    fi
+    DASHBOARD_DIR="$LAB_DIR/dashboard"
+}
+
+# --- Bulletproof IP Detection ---
+detect_ip() {
+    local ip=""
+    # Method 1: Default routing table source IP
+    ip=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K\S+' || true)
+    
+    # Method 2: ens33 interface (VMware primary default)
+    if [[ -z "$ip" || "$ip" =~ ^169\.254 ]]; then
+        ip=$(ip -4 addr show ens33 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | head -n1 || true)
+    fi
+    
+    # Method 3: First valid non-loopback, non-docker physical interface
+    if [[ -z "$ip" || "$ip" =~ ^169\.254 ]]; then
+        for iface in $(ip -o link show 2>/dev/null | awk -F': ' '{print $2}' | grep -v 'lo\|docker\|br-\|veth'); do
+            local cand
+            cand=$(ip -4 addr show "$iface" 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | head -n1 || true)
+            if [[ -n "$cand" && ! "$cand" =~ ^169\.254 && ! "$cand" =~ ^127\. ]]; then
+                ip="$cand"
+                break
+            fi
+        done
+    fi
+    
+    # Method 4: hostname -I
+    if [[ -z "$ip" || "$ip" =~ ^169\.254 ]]; then
+        ip=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+    fi
+    
+    # Method 5: Fallback to localhost
+    if [[ -z "$ip" || "$ip" =~ ^169\.254 ]]; then
+        ip="127.0.0.1"
+    fi
+    
+    echo "$ip"
+}
+
+# --- Docker Compose Command Finder ---
+get_docker_compose() {
+    if docker compose version &>/dev/null; then
+        echo "docker compose"
+    elif command -v docker-compose &>/dev/null; then
+        echo "docker-compose"
+    else
+        echo ""
+    fi
+}
+
+# --- ASCII Magic Banner ---
+show_banner() {
+    echo -e "${NEON_CYAN}   ______      __             ____                          ___     ____  ${NC}"
+    echo -e "${NEON_AQUA}  / ____/_  __/ /_  ___  ____/ __ \\____ _____  ____ ____   |__ \\   / __ \\ ${NC}"
+    echo -e "${NEON_GREEN} / /   / / / / __ \\/ _ \\/ __/ /_/ / __ \`/ __ \\/ __ \`/ _ \\  __/ /  / / / / ${NC}"
+    echo -e "${BRIGHT_GREEN}/ /___/ /_/ / /_/ /  __/ / / _, _/ /_/ / / / / /_/ /  __/ / __/_ / /_/ /  ${NC}"
+    echo -e "${ELECTRIC_GREEN}\\____/\\__, /_.___/\\___/_/ /_/ |_|\\__,_/_/ /_/\\__, /\\___/ /____/(_)____/   ${NC}"
+    echo -e "${MUTED}     /____/                                 /____/                        ${NC}"
+    echo -e "       ${BOLD}${WHITE}S E C U R I T Y   O P E R A T I O N S   C E N T E R   L A B${NC}"
+    echo -e "       ${MUTED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+}
+
+# --- Interactive System Information Card ---
+show_dashboard_card() {
+    local ip="$1"
+    echo ""
+    echo -e "  ${NEON_CYAN}╭────────────────────────────────────────────────────────────────────────────╮${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${WHITE}🌐 HOST IP ADDRESS :${NC} ${NEON_YELLOW}${BOLD}${ip}${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${WHITE}🛡️  WEB DASHBOARD   :${NC} ${NEON_AQUA}${BOLD}http://${ip}:9000${NC}"
+    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${NEON_RED}${BOLD}🔴 RED TEAM (Attacker Targets)${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}DVWA Web App${NC}     → ${NEON_AQUA}http://${ip}:8081${NC}  ${MUTED}[admin / password]${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}OWASP Juice Shop${NC} → ${NEON_AQUA}http://${ip}:3000${NC}  ${MUTED}[Register inside app]${NC}"
+    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${NEON_CYAN}${BOLD}🔵 BLUE TEAM (Defense & SIEM)${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk SIEM${NC}      → ${NEON_AQUA}http://${ip}:8000${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk HEC${NC}       → ${NEON_AQUA}http://${ip}:8088${NC}  ${MUTED}[HTTP Event Collector]${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Suricata NIDS${NC}    → ${BRIGHT_GREEN}ACTIVE (Host Mode)${NC} ${MUTED}[/var/log/suricata]${NC}"
+    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${GOLD}${BOLD}⚡ QUICK MANAGEMENT COMMANDS${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange status${NC}   ${MUTED}│${NC} Check live container health & resources"
+    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange fix${NC}      ${MUTED}│${NC} Self-healing auto-repair & disk expander"
+    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange stop${NC}     ${MUTED}│${NC} Gracefully shutdown lab containers"
+    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange restart${NC}  ${MUTED}│${NC} Quick restart all services"
+    echo -e "  ${NEON_CYAN}╰────────────────────────────────────────────────────────────────────────────╯${NC}"
+    echo ""
+}
+
+# --- Generate High-Tech Web Dashboard ---
+generate_dashboard() {
+    local ip="$1"
+    mkdir -p "$DASHBOARD_DIR"
+
+    cat << 'EOF_HTML' > "$DASHBOARD_DIR/index.html"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>CyberRange 2.0 // SOC Lab Command Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #05080e;
+            --bg-card: rgba(11, 18, 27, 0.75);
+            --border-glow: rgba(0, 255, 136, 0.25);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --neon-green: #00ff88;
+            --neon-cyan: #00e5ff;
+            --neon-red: #ff3366;
+            --neon-yellow: #ffb800;
+            --neon-purple: #bd00ff;
+            --text-main: #e2f0e8;
+            --text-muted: #627d73;
+            --font-head: 'Orbitron', monospace, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.07) 0%, transparent 60%),
+                radial-gradient(circle at 100% 100%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.25) 2px, rgba(0, 0, 0, 0.25) 4px);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Top Brand Bar */
+        header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(0, 255, 136, 0.08);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 999px;
+            font-family: var(--font-head);
+            font-size: 0.75rem;
+            color: var(--neon-green);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+
+        .logo-title {
+            font-family: var(--font-head);
+            font-size: clamp(2.2rem, 5vw, 3.4rem);
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            color: #ffffff;
+            text-shadow: 0 0 25px rgba(0, 229, 255, 0.5);
+            line-height: 1.1;
+        }
+
+        .logo-title span.grad {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .version-badge {
+            font-size: 0.9rem;
+            vertical-align: super;
+            background: linear-gradient(135deg, #ff0055, #ff5500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .tagline {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            letter-spacing: 0.25em;
+            margin-top: 8px;
+            text-transform: uppercase;
+        }
+
+        /* Status & IP Bar */
+        .status-strip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-left: 4px solid var(--neon-cyan);
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 36px;
+            backdrop-filter: blur(12px);
+        }
+
+        .status-strip-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .ip-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-family: var(--font-head);
+            font-size: 0.82rem;
+            color: var(--neon-cyan);
+            letter-spacing: 0.05em;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+        .copy-btn:hover { color: var(--neon-green); }
+
+        /* Section Title */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            margin-top: 32px;
+        }
+
+        .section-header h2 {
+            font-family: var(--font-head);
+            font-size: 0.95rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .red-header { color: var(--neon-red); }
+        .blue-header { color: var(--neon-cyan); }
+        .green-header { color: var(--neon-green); }
+
+        .section-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        /* Card Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .lab-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .lab-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--accent-color, var(--neon-green));
+            box-shadow: 0 0 14px var(--accent-color, var(--neon-green));
+        }
+
+        .lab-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-color, var(--neon-green));
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .card-tag {
+            font-family: var(--font-head);
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .ping-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--neon-green);
+        }
+
+        .card-title {
+            font-family: var(--font-head);
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        .card-creds {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 0.75rem;
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .cred-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cred-label { color: var(--text-muted); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; }
+        .cred-val { color: var(--neon-green); font-weight: bold; }
+
+        .btn-launch {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 11px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--accent-color);
+            border-radius: 6px;
+            color: #ffffff;
+            font-family: var(--font-head);
+            font-size: 0.78rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-launch:hover {
+            background: var(--accent-color);
+            color: #000000;
+            box-shadow: 0 0 16px var(--accent-color);
+            font-weight: 800;
+        }
+
+        /* Cheatsheet Terminal Card */
+        .cli-box {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--neon-yellow);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 36px;
+        }
+
+        .cli-title {
+            font-family: var(--font-head);
+            font-size: 0.85rem;
+            color: var(--neon-yellow);
+            letter-spacing: 0.15em;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cli-commands {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .cli-cmd {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .cli-cmd:hover {
+            border-color: var(--neon-green);
+        }
+        .cli-cmd code {
+            color: var(--neon-green);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .cli-cmd span {
+            color: var(--text-muted);
+            font-size: 0.68rem;
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="badge-pill">
+            <span class="pulse-dot"></span>
+            CYBERRANGE 2.0 // SOC LAB ONLINE
+        </div>
+        <h1 class="logo-title">CYBER<span class="grad">RANGE</span> <span class="version-badge">2.0</span></h1>
+        <div class="tagline">Automated Hands-on Security Operations Center</div>
+    </header>
+
+    <div class="status-strip">
+        <div class="status-strip-item">
+            <span class="pulse-dot"></span>
+            <span>SYSTEM HEALTH: <strong>OPTIMAL</strong></span>
+        </div>
+        <div class="status-strip-item">
+            <span>LAN ACCESS:</span>
+            <div class="ip-box">
+                <span id="hostIpDisplay">__LAN_IP__</span>
+                <button class="copy-btn" onclick="copyText('__LAN_IP__')" title="Copy IP">
+                    📋
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Red Team Targets -->
+    <div class="section-header">
+        <h2 class="red-header">🎯 Red Team Targets (Vulnerable Labs)</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="grid">
+        <!-- DVWA -->
+        <div class="lab-card" style="--accent-color: var(--neon-red);">
+            <div>
+                <div class="card-top">
+                    <span class="card-tag">Web Exploitation</span>
+                    <span class="ping-pill">● ACTIVE :8081</span>
+                </div>
+                <div class="card-title">DVWA</div>
+                <div class="card-desc">Damn Vulnerable Web Application. Classic labs for SQLi, XSS, CSRF, File Inclusion, and Command Injection.</div>
+                <div class="card-creds">
+                    <div class="cred-row">
+                        <span class="cred-label">Username</span>
+                        <span class="cred-val">admin</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">Password</span>
+                        <span class="cred-val">password</span>
+                    </div>
+                </div>
+            </div>
+            <a class="btn-launch" href="http://__LAN_IP__:8081" target="_blank">Launch DVWA ↗</a>
+        </div>
+
+        <!-- Juice Shop -->
+        <div class="lab-card" style="--accent-color: var(--neon-yellow);">
+            <div>
+                <div class="card-top">
+                    <span class="card-tag">Modern Web Sec</span>
+                    <span class="ping-pill">● ACTIVE :3000</span>
+                </div>
+                <div class="card-title">OWASP Juice Shop</div>
+                <div class="card-desc">Modern Node.js / Angular architecture. Insecure e-commerce with real-world vulnerabilities and score board.</div>
+                <div class="card-creds">
+                    <div class="cred-row">
+                        <span class="cred-label">Authentication</span>
+                        <span class="cred-val">Self-Register Inside App</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">Score Board</span>
+                        <span class="cred-val">/#/score-board</span>
+                    </div>
+                </div>
+            </div>
+            <a class="btn-launch" href="http://__LAN_IP__:3000" target="_blank">Launch Juice Shop ↗</a>
+        </div>
+    </div>
+
+    <!-- Blue Team Defenses -->
+    <div class="section-header">
+        <h2 class="blue-header">🛡️ Blue Team Defenses (SIEM & NIDS)</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="grid">
+        <!-- Splunk SIEM -->
+        <div class="lab-card" style="--accent-color: var(--neon-cyan);">
+            <div>
+                <div class="card-top">
+                    <span class="card-tag">Enterprise SIEM</span>
+                    <span class="ping-pill">● ACTIVE :8000</span>
+                </div>
+                <div class="card-title">Splunk Enterprise</div>
+                <div class="card-desc">Core Security Operations platform. Correlate logs, monitor attacks on DVWA/Juice Shop, and build SOC alert rules.</div>
+                <div class="card-creds">
+                    <div class="cred-row">
+                        <span class="cred-label">Username</span>
+                        <span class="cred-val">admin</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">Password</span>
+                        <span class="cred-val">CyberRange@123</span>
+                    </div>
+                </div>
+            </div>
+            <a class="btn-launch" href="http://__LAN_IP__:8000" target="_blank">Open Splunk SIEM ↗</a>
+        </div>
+
+        <!-- Suricata NIDS -->
+        <div class="lab-card" style="--accent-color: var(--neon-green);">
+            <div>
+                <div class="card-top">
+                    <span class="card-tag">Network IDS</span>
+                    <span class="ping-pill">● SNIFFING HOST</span>
+                </div>
+                <div class="card-title">Suricata NIDS</div>
+                <div class="card-desc">High performance Network Threat Detection engine inspecting live packets and writing alerts to Fast & EVE JSON logs.</div>
+                <div class="card-creds">
+                    <div class="cred-row">
+                        <span class="cred-label">Log Location</span>
+                        <span class="cred-val">/var/log/suricata/fast.log</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">Live Stream</span>
+                        <span class="cred-val">tail -f /var/log/suricata/fast.log</span>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-launch" onclick="copyText('tail -f /var/log/suricata/fast.log')">Copy Tail Command 📋</button>
+        </div>
+    </div>
+
+    <!-- Quick Terminal Cheatsheet -->
+    <div class="cli-box">
+        <div class="cli-title">⚡ CyberRange 2.0 Terminal Cheatsheet</div>
+        <div class="cli-commands">
+            <div class="cli-cmd" onclick="copyText('cyberrange status')">
+                <code>cyberrange status</code>
+                <span>View container health & host resources</span>
+            </div>
+            <div class="cli-cmd" onclick="copyText('cyberrange fix')">
+                <code>cyberrange fix</code>
+                <span>Self-healing repair & auto disk expansion</span>
+            </div>
+            <div class="cli-cmd" onclick="copyText('cyberrange stop')">
+                <code>cyberrange stop</code>
+                <span>Cleanly shutdown all lab services</span>
+            </div>
+            <div class="cli-cmd" onclick="copyText('cyberrange restart')">
+                <code>cyberrange restart</code>
+                <span>Perform a fresh service cycle</span>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        CYBERRANGE 2.0 &nbsp;·&nbsp; EDUCATIONAL USE ONLY &nbsp;·&nbsp; DEFEND & ATTACK RESPONSIBLY
+    </footer>
+</div>
+
+<script>
+    function copyText(val) {
+        navigator.clipboard.writeText(val).then(() => {
+            alert('Copied to clipboard: ' + val);
+        }).catch(() => {
+            prompt('Copy manually:', val);
+        });
+    }
+</script>
+</body>
+</html>
+EOF_HTML
+
+    # Replace placeholder with current IP
+    sed -i "s/__LAN_IP__/$ip/g" "$DASHBOARD_DIR/index.html"
+}
+
+# --- Command: START ---
+cmd_start() {
+    resolve_paths
+    local ip
+    ip=$(detect_ip)
+    
+    # Check Docker installation
+    if ! command -v docker &>/dev/null; then
+        echo -e "${RED}[!] Error: Docker is not installed.${NC}"
+        echo -e "${YELLOW}[*] Run 'sudo cyberrange fix' or 'sudo ./install.sh' to install Docker.${NC}"
+        exit 1
+    fi
+    
+    # Start Docker service if inactive
+    if ! docker info &>/dev/null; then
+        echo -e "${YELLOW}[*] Docker daemon is not active. Starting docker service...${NC}"
+        sudo systemctl start docker || true
+        sleep 2
+    fi
+    
+    local compose_cmd
+    compose_cmd=$(get_docker_compose)
+    if [[ -z "$compose_cmd" ]]; then
+        echo -e "${RED}[!] Error: Neither 'docker compose' nor 'docker-compose' found.${NC}"
+        exit 1
+    fi
+    
+    if [[ ! -f "$LAB_DIR/docker-compose.yml" ]]; then
+        echo -e "${RED}[!] Error: docker-compose.yml not found in $LAB_DIR.${NC}"
+        exit 1
+    fi
+    
+    # Kill any dangling server on port 9000
+    pkill -f "python3 -m http.server 9000" 2>/dev/null || true
+    if command -v fuser &>/dev/null; then
+        fuser -k 9000/tcp 2>/dev/null || true
+    fi
+    
+    # Generate dashboard
+    echo -e "${NEON_AQUA}[*] Generating CyberRange 2.0 Web Dashboard for IP ${BOLD}${ip}${NC}..."
+    generate_dashboard "$ip"
+    
+    # Launch containers
+    echo -e "${NEON_AQUA}[*] Launching containers via ${compose_cmd}...${NC}"
+    (cd "$LAB_DIR" && $compose_cmd up -d)
+    
+    # Launch Web Server on port 9000
+    echo -e "${NEON_AQUA}[*] Starting Web Dashboard server on port 9000...${NC}"
+    mkdir -p "$DASHBOARD_DIR"
+    nohup python3 -m http.server 9000 --directory "$DASHBOARD_DIR" >/dev/null 2>&1 &
+    
+    sleep 1
+    
+    # Display ASCII Magic & Quick links
+    if [[ "${1:-}" != "--quiet" ]]; then
+        show_banner
+        show_dashboard_card "$ip"
+    fi
+}
+
+# --- Command: STOP ---
+cmd_stop() {
+    resolve_paths
+    local compose_cmd
+    compose_cmd=$(get_docker_compose)
+    
+    echo -e "${NEON_CYAN}[*] Stopping CyberRange Docker containers...${NC}"
+    if [[ -n "$compose_cmd" && -f "$LAB_DIR/docker-compose.yml" ]]; then
+        (cd "$LAB_DIR" && $compose_cmd down 2>/dev/null || true)
+    fi
+    
+    echo -e "${NEON_CYAN}[*] Terminating Dashboard HTTP Server (Port 9000)...${NC}"
+    pkill -f "python3 -m http.server 9000" 2>/dev/null || true
+    if command -v fuser &>/dev/null; then
+        fuser -k 9000/tcp 2>/dev/null || true
+    fi
+    
+    echo -e "${ELECTRIC_GREEN}[✓] CyberRange 2.0 Lab stopped successfully.${NC}"
+}
+
+# --- Command: RESTART ---
+cmd_restart() {
+    cmd_stop
+    sleep 2
+    cmd_start
+}
+
+# --- Command: STATUS ---
+cmd_status() {
+    resolve_paths
+    local ip
+    ip=$(detect_ip)
+    
+    show_banner
+    echo -e "  ${WHITE}${BOLD}SYSTEM DIAGNOSTICS & HEALTH CHECK${NC}"
+    echo -e "  ${MUTED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    
+    # Check Docker Daemon
+    if docker info &>/dev/null; then
+        echo -e "  [✓] Docker Daemon    : ${BRIGHT_GREEN}RUNNING${NC}"
+    else
+        echo -e "  [✗] Docker Daemon    : ${RED}STOPPED${NC} (Run 'cyberrange fix')"
+    fi
+    
+    # Containers Check
+    local containers=("cyberrange_dvwa" "cyberrange_juice" "cyberrange_splunk" "cyberrange_suricata")
+    for c in "${containers[@]}"; do
+        local status
+        status=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo "not running")
+        if [[ "$status" == "running" ]]; then
+            echo -e "  [✓] Container ${WHITE}$c${NC} : ${BRIGHT_GREEN}UP (running)${NC}"
+        else
+            echo -e "  [✗] Container ${WHITE}$c${NC} : ${RED}$status${NC}"
+        fi
+    done
+    
+    # Dashboard check
+    if pgrep -f "python3 -m http.server 9000" &>/dev/null; then
+        echo -e "  [✓] Web Dashboard    : ${BRIGHT_GREEN}ACTIVE (Port 9000)${NC}"
+    else
+        echo -e "  [✗] Web Dashboard    : ${YELLOW}OFFLINE${NC}"
+    fi
+    
+    # Autostart check
+    local auto_status="disabled"
+    if systemctl is-enabled cyberrange.service &>/dev/null; then
+        auto_status="${BRIGHT_GREEN}ENABLED (Boot on startup)${NC}"
+    else
+        auto_status="${YELLOW}DISABLED${NC} (Enable via 'cyberrange autostart enable')"
+    fi
+    echo -e "  [•] Auto-Start       : $auto_status"
+    
+    # System Resources
+    echo -e "  ${MUTED}────────────────────────────────────────────────────────────${NC}"
+    local mem_usage
+    mem_usage=$(free -h 2>/dev/null | awk '/Mem:/ {print $3 "/" $2}' || echo "N/A")
+    local disk_usage
+    disk_usage=$(df -h / 2>/dev/null | awk 'NR==2 {print $3 "/" $2 " (" $5 " used)"}' || echo "N/A")
+    echo -e "  [•] Memory In Use    : ${WHITE}$mem_usage${NC}"
+    echo -e "  [•] Root Disk In Use : ${WHITE}$disk_usage${NC}"
+    
+    show_dashboard_card "$ip"
+}
+
+# --- Command: FIX (Self-Healing Engine) ---
+cmd_fix() {
+    resolve_paths
+    show_banner
+    echo -e "${GOLD}${BOLD}[*] INITIATING CYBERRANGE 2.0 AUTOMATED REPAIR & DIAGNOSTICS...${NC}\n"
+    
+    # 1. Check Root / Sudo
+    echo -e "${WHITE}[1/7] Checking Permissions...${NC}"
+    local is_root=false
+    if [[ $EUID -eq 0 ]]; then
+        is_root=true
+        echo -e "      ${BRIGHT_GREEN}[✓] Running with administrative privileges.${NC}"
+    else
+        echo -e "      ${YELLOW}[!] Note: Running as standard user. Sudo will be requested when needed.${NC}"
+    fi
+    
+    # 2. Fix Docker Daemon
+    echo -e "${WHITE}[2/7] Checking Docker Engine...${NC}"
+    if ! docker info &>/dev/null; then
+        echo -e "      ${YELLOW}[*] Restarting Docker service...${NC}"
+        sudo systemctl restart docker || true
+        sleep 3
+    fi
+    if docker info &>/dev/null; then
+        echo -e "      ${BRIGHT_GREEN}[✓] Docker Engine is healthy.${NC}"
+    else
+        echo -e "      ${RED}[✗] Failed to start Docker. Check 'sudo journalctl -u docker'.${NC}"
+    fi
+    
+    # 3. Check & Expand Disk / Clean Space
+    echo -e "${WHITE}[3/7] Optimizing Storage & Expanding Disk...${NC}"
+    # Expand LVM if available
+    local root_lv
+    root_lv=$(df / | tail -1 | awk '{print $1}')
+    if [[ "$root_lv" == *"/dev/mapper/"* ]]; then
+        echo -e "      ${NEON_AQUA}[*] LVM Partition detected ($root_lv). Reclaiming 100% free space...${NC}"
+        sudo lvextend -l +100%FREE "$root_lv" 2>/dev/null || true
+        sudo resize2fs "$root_lv" 2>/dev/null || true
+    fi
+    
+    # Truncate runaway Docker logs
+    echo -e "      ${NEON_AQUA}[*] Truncating oversized Docker log files...${NC}"
+    sudo sh -c 'truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null' || true
+    
+    # Prune dangling Docker items
+    echo -e "      ${NEON_AQUA}[*] Pruning unused Docker build cache & dangling networks...${NC}"
+    docker system prune -f 2>/dev/null || true
+    echo -e "      ${BRIGHT_GREEN}[✓] Storage optimization complete.${NC}"
+    
+    # 4. Port Conflicts & Orphaned Processes
+    echo -e "${WHITE}[4/7] Checking & Resolving Port Conflicts...${NC}"
+    pkill -f "python3 -m http.server 9000" 2>/dev/null || true
+    if command -v fuser &>/dev/null; then
+        sudo fuser -k 9000/tcp 2>/dev/null || true
+    fi
+    echo -e "      ${BRIGHT_GREEN}[✓] Port 9000 cleared for Dashboard.${NC}"
+    
+    # 5. Fix Directory & Suricata Permissions
+    echo -e "${WHITE}[5/7] Verifying System Permissions & Log Dirs...${NC}"
+    sudo mkdir -p /var/log/suricata
+    sudo chmod -R 777 /var/log/suricata
+    if [[ -d "$LAB_DIR" ]]; then
+        chmod +x "$LAB_DIR"/*.sh 2>/dev/null || true
+    fi
+    echo -e "      ${BRIGHT_GREEN}[✓] Suricata log directory permissions granted.${NC}"
+    
+    # 6. Ensure Systemd Autostart Service is Installed
+    echo -e "${WHITE}[6/7] Verifying Systemd Autostart Configuration...${NC}"
+    if [[ -f "$LAB_DIR/cyberrange.service" ]]; then
+        sudo cp "$LAB_DIR/cyberrange.service" /etc/systemd/system/cyberrange.service
+        sudo systemctl daemon-reload
+        sudo systemctl enable cyberrange.service 2>/dev/null || true
+        echo -e "      ${BRIGHT_GREEN}[✓] Cyberrange autostart on boot is active.${NC}"
+    fi
+    
+    # 7. Restart Lab & Verify Endpoints
+    echo -e "${WHITE}[7/7] Re-initializing Lab Services...${NC}"
+    cmd_start
+    
+    echo -e "\n${BRIGHT_GREEN}${BOLD}[✓] REPAIR COMPLETE: All CyberRange 2.0 subsystems checked and stabilized!${NC}\n"
+}
+
+# --- Command: RESET ---
+cmd_reset() {
+    resolve_paths
+    echo -e "${NEON_RED}${BOLD}⚠️  WARNING: Resetting will destroy container states, volumes, and reset all logs!${NC}"
+    read -rp "Are you sure you want to completely reset CyberRange? (y/N): " confirm
+    if [[ "$confirm" =~ ^[yY]([eE][sS])?$ ]]; then
+        echo -e "${YELLOW}[*] Wiping containers and volumes...${NC}"
+        local compose_cmd
+        compose_cmd=$(get_docker_compose)
+        if [[ -n "$compose_cmd" && -f "$LAB_DIR/docker-compose.yml" ]]; then
+            (cd "$LAB_DIR" && $compose_cmd down -v)
+        fi
+        
+        echo -e "${YELLOW}[*] Wiping Suricata logs...${NC}"
+        sudo rm -rf /var/log/suricata/* 2>/dev/null || true
+        
+        echo -e "${YELLOW}[*] Truncating Docker logs...${NC}"
+        sudo sh -c 'truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null' || true
+        
+        echo -e "${YELLOW}[*] Purging Docker system cache...${NC}"
+        docker system prune -f
+        docker volume prune -a -f
+        
+        echo -e "${BRIGHT_GREEN}[✓] Clean reset complete. Re-launching CyberRange...${NC}"
+        cmd_start
+    else
+        echo -e "${MUTED}Reset cancelled.${NC}"
+    fi
+}
+
+# --- Command: AUTOSTART ---
+cmd_autostart() {
+    resolve_paths
+    local action="${1:-status}"
+    case "$action" in
+        enable)
+            if [[ -f "$LAB_DIR/cyberrange.service" ]]; then
+                sudo cp "$LAB_DIR/cyberrange.service" /etc/systemd/system/cyberrange.service
+                sudo systemctl daemon-reload
+                sudo systemctl enable cyberrange.service
+                echo -e "${BRIGHT_GREEN}[✓] CyberRange 2.0 autostart on machine boot has been ENABLED.${NC}"
+            else
+                echo -e "${RED}[!] cyberrange.service file not found in $LAB_DIR.${NC}"
+            fi
+            ;;
+        disable)
+            sudo systemctl disable cyberrange.service
+            echo -e "${YELLOW}[*] CyberRange 2.0 autostart on machine boot has been DISABLED.${NC}"
+            ;;
+        status)
+            echo -e "${WHITE}Systemd Autostart Status:${NC}"
+            systemctl status cyberrange.service --no-pager || true
+            ;;
+        *)
+            echo "Usage: cyberrange autostart [enable|disable|status]"
+            ;;
+    esac
+}
+
+# --- Command: BANNER ---
+cmd_banner() {
+    local ip
+    ip=$(detect_ip)
+    show_banner
+    show_dashboard_card "$ip"
+}
+
+# --- Command: HELP ---
+cmd_help() {
+    show_banner
+    echo -e "  ${WHITE}${BOLD}USAGE:${NC} cyberrange <command> [options]\n"
+    echo -e "  ${GOLD}${BOLD}COMMANDS:${NC}"
+    echo -e "    ${NEON_CYAN}start${NC}       Start all lab containers, generate dashboard, and launch web server"
+    echo -e "    ${NEON_CYAN}stop${NC}        Stop all lab containers and terminate web server"
+    echo -e "    ${NEON_CYAN}restart${NC}     Perform a clean stop and start cycle"
+    echo -e "    ${NEON_CYAN}status${NC}      Display live container health, open ports, and system metrics"
+    echo -e "    ${NEON_CYAN}fix${NC}         Auto-diagnose & repair Docker, LVM disk, logs, and port conflicts"
+    echo -e "    ${NEON_CYAN}reset${NC}       Wipe all lab data, volumes, logs, and perform a fresh restart"
+    echo -e "    ${NEON_CYAN}banner${NC}      Display the aesthetic ASCII Magic splash screen and endpoints"
+    echo -e "    ${NEON_CYAN}autostart${NC}   Manage boot auto-start: [enable | disable | status]"
+    echo -e "    ${NEON_CYAN}version${NC}     Display CyberRange version\n"
+}
+
+# --- Main Dispatcher ---
+main() {
+    case "${1:-}" in
+        start)
+            cmd_start "${2:-}"
+            ;;
+        stop)
+            cmd_stop
+            ;;
+        restart)
+            cmd_restart
+            ;;
+        status)
+            cmd_status
+            ;;
+        fix)
+            cmd_fix
+            ;;
+        reset)
+            cmd_reset
+            ;;
+        banner|info)
+            cmd_banner
+            ;;
+        autostart)
+            cmd_autostart "${2:-status}"
+            ;;
+        version|-v|--version)
+            echo -e "${NEON_CYAN}CyberRange 2.0 (Elite Edition)${NC}"
+            ;;
+        help|-h|--help|"")
+            cmd_help
+            ;;
+        *)
+            echo -e "${RED}[!] Unknown command: $1${NC}"
+            echo -e "${YELLOW}Run 'cyberrange help' for a list of available commands.${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

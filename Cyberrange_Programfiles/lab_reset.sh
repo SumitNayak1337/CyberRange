@@ -1,31 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+# ==============================================================================
+#   CyberRange SOC Lab Reset — CyberRange 2.0 Edition
+# ==============================================================================
 
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo -e "${RED}âš ï¸ WARNING: This will destroy all containers and wipe all local logs/data.${NC}"
+if [[ -f "$SCRIPT_DIR/cyberrange" ]]; then
+    exec "$SCRIPT_DIR/cyberrange" reset "$@"
+elif command -v cyberrange &>/dev/null; then
+    exec cyberrange reset "$@"
+fi
+
+echo "Warning: Resetting lab."
 read -p "Are you sure? (y/N): " confirm
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-    echo -e "${YELLOW}[+] Tearing down lab and volumes...${NC}"
-    docker compose down -v
-    
-    echo -e "${YELLOW}[+] Wiping Suricata logs...${NC}"
-    sudo rm -rf /var/log/suricata/*
-
-    echo -e "${YELLOW}[+] Truncating runaway Docker container logs...${NC}"
-    # Empty all docker json logs to instantly reclaim space from restart loops
-    sudo sh -c 'truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null' || true
-
-    echo -e "${YELLOW}[+] Deep cleaning Docker (pruning unused images, networks, and volumes)...${NC}"
-    # Prune stopped containers, dangling images, unused networks
-    docker system prune -f
-    # Force prune all unused volumes to kill hidden data
-    docker volume prune -a -f
-
-    echo -e "${YELLOW}[+] Restarting fresh...${NC}"
+    docker compose down -v 2>/dev/null || docker-compose down -v 2>/dev/null || true
+    sudo rm -rf /var/log/suricata/* 2>/dev/null || true
+    docker system prune -f 2>/dev/null || true
     ./lab-start.sh
-else
-    echo "Aborted."
 fi
