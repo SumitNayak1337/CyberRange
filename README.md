@@ -1,4 +1,4 @@
-# CyberRange 2.0 // SOC Lab (Elite Edition)
+<div align="center">
 
 ```
    ______      __             ____                          ___     ____ 
@@ -7,193 +7,424 @@
 / /___/ /_/ / /_/ /  __/ / / _, _/ /_/ / / / / /_/ /  __/ / __/_ / /_/ / 
 \____/\__, /_.___/\___/_/ /_/ |_|\__,_/_/ /_/\__, /\___/ /____/(_)____/  
      /____/                                 /____/                       
-       S E C U R I T Y   O P E R A T I O N S   C E N T E R   L A B
 ```
 
-A high-performance, automated Security Operations Center (SOC) lab environment designed for cybersecurity training, attack simulation, and blue team detection engineering.
+# CyberRange 2.0 — SOC Lab (Elite Edition)
 
-CyberRange 2.0 features **automatic boot startup (systemd)**, a unified **`cyberrange` CLI command**, a **self-healing auto-repair engine (`cyberrange fix`)**, **terminal ASCII magic MOTD**, and a **next-gen cyberpunk web dashboard**.
+**Automated, Hands-On Security Operations Center Lab**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Ubuntu%2022.04-orange.svg)](#)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](#)
+[![OVA / OVF Ready](https://img.shields.io/badge/Download-OVA%20%2F%20OVF%20Ready-brightgreen.svg)](#-download--deploy)
+
+*A high-performance, automated SOC lab for cybersecurity training, attack simulation, and blue team detection engineering.*
 
 ---
 
 ### 📥 [Click Here to Download `Cyberrange.ovf`](cyberrange%20_docs/Cyberrange.ovf)
+**Pre-Configured VMware & VirtualBox OVF Appliance** · [Manifest Checksum](cyberrange%20_docs/Cyberrange.mf)
+
+</div>
+
+---
+
+![CyberRange 2.0 Dashboard](assets/dashboard.png)
+*CyberRange 2.0 Web Dashboard — Red Team targets, Blue Team defenses, and SOAR in one view*
+
+![CyberRange 2.0 Overview](assets/overview.png)
+*CyberRange 2.0 Web Interface Overview*
+
+![CyberRange 2.0 Terminal](assets/terminal.png)
+*CyberRange 2.0 SSH Login Banner — ASCII art + live endpoints on every SSH login*
 
 ---
 
 ## 📋 Table of Contents
-- [What's New in CyberRange 2.0](#whats-new-in-cyberrange-20)
-- [System Architecture](#system-architecture)
-- [Quick Start & Installation](#quick-start--installation)
-- [Unified CLI Commands (`cyberrange`)](#unified-cli-commands-cyberrange)
-- [Automatic Boot Startup (Systemd)](#automatic-boot-startup-systemd)
-- [Screenshots](#screenshots)
-- [Attack Targets & Defense Tools](#attack-targets--defense-tools)
-- [Troubleshooting & Auto-Fix](#troubleshooting--auto-fix)
-- [Contributing](#contributing)
-- [License](#license)
+
+- [Features](#-features)
+- [System Architecture](#-system-architecture)
+- [VM Configuration & Requirements](#-vm-configuration--requirements)
+- [Download & Deploy](#-download--deploy)
+- [Installation on Existing Machine](#-installation-on-existing-machine)
+- [CLI Commands](#-cli-commands-cyberrange)
+- [Lab Manager — Add/Remove Labs](#-lab-manager--addremove-labs)
+- [Attack Targets & Defense Tools](#-attack-targets--defense-tools)
+- [Default Credentials](#-default-credentials)
+- [OVA Export Guide (VMware)](#-ova-export-guide-vmware)
+- [Troubleshooting & Auto-Fix](#-troubleshooting--auto-fix)
+- [Optimize for Low RAM (SSH-Only)](#-optimize-for-low-ram-ssh-only)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## ⚡ What's New in CyberRange 2.0
+## ⚡ Features
 
-- 🚀 **Auto-Start on Boot**: No need to manually start the lab every time you power on the machine. CyberRange starts automatically in the background via `systemd` (`cyberrange.service`).
-- 🛠️ **Unified `cyberrange` CLI Tool**: Manage everything with simple global commands from anywhere in your terminal (`cyberrange start`, `stop`, `status`, `fix`, `reset`).
-- 🧙‍♂️ **Self-Healing Diagnostics (`cyberrange fix`)**: Automated recovery that diagnoses Docker health, auto-expands LVM partitions, truncates runaway Docker logs, resolves port conflicts, and heals permissions.
-- ✨ **ASCII Magic MOTD**: Login splash screen with glowing ANSI gradients, live host IP detection, endpoint directory, and status overview right on SSH login.
-- 💻 **Cyberpunk Web Dashboard 2.0**: Redesigned UI with real-time health pings, 1-click credential copying, dark theme scanline aesthetics, and quick cheatsheets.
+| Feature | Description |
+|:--------|:------------|
+| 🚀 **One-Command Deploy** | `sudo ./install.sh` installs everything — Docker, firewall, CLI, MOTD |
+| 🛠️ **Unified CLI** | `cyberrange start/stop/status/fix/reset/lab` from anywhere |
+| 📦 **Dynamic Lab Manager** | `cyberrange lab add juice-shop` — install/remove labs on-the-fly |
+| 🔧 **Self-Healing Engine** | `cyberrange fix` — auto-repairs Docker, LVM disk, logs, ports |
+| ✨ **ASCII MOTD Banner** | Glowing terminal banner with live IPs and credentials on SSH login |
+| 💻 **Cyberpunk Dashboard** | Web dashboard on port 9000 with neon theme, live pings, 1-click creds |
+| 🔄 **Auto-Start (systemd)** | Lab starts automatically on VM boot (optional) |
+| 🛡️ **Built-in Security** | UFW firewall + Fail2ban + Suricata NIDS auto-configured |
+| ⚡ **SOAR Integration** | Shuffle SOAR with playbook automation built-in |
+| 📊 **Memory Optimized** | All containers have memory limits — runs on 8GB RAM |
 
 ---
 
 ## 🧩 System Architecture
 
 ```
-                                  [ CyberRange Host Machine ]
-                                  IP: Detected LAN IP (e.g., 10.24.175.123)
-                                             │
-               ┌─────────────────────────────┼─────────────────────────────┐
-               │                             │                             │
-        [ Port 9000 ]                 [ Port 8081 ]                 [ Port 3000 ]
-     Command Deck Dashboard               DVWA                      OWASP Juice Shop
-  (Aesthetic SOC Web Portal)      (Web Vulnerability Lab)       (Modern Node.js Sec Lab)
-               │                             │                             │
-               └─────────────────────────────┼─────────────────────────────┘
-                                             │
-               ┌─────────────────────────────┴─────────────────────────────┐
-               │                                                           │
-        [ Port 8000 / 8088 ]                                     [ Host Network ]
-      Splunk Enterprise SIEM                                      Suricata NIDS
-   (Log Aggregation & SOC Rules)                              (Real-time Packet Sniffer)
+                               ┌─────────────────────────────────┐
+                               │    CyberRange Host Machine      │
+                               │    Ubuntu 22.04 LTS Server      │
+                               │    IP: Auto-detected LAN IP     │
+                               └────────────┬────────────────────┘
+                                            │
+           ┌────────────────────────────────┼────────────────────────────────┐
+           │                                │                                │
+    ┌──────┴──────┐                 ┌───────┴───────┐               ┌───────┴───────┐
+    │  Port 9000  │                 │  Port 8081    │               │  Host Network │
+    │  Dashboard  │                 │  DVWA Web App │               │  Suricata IDS │
+    │  (Web UI)   │                 │  (Red Team)   │               │  (Sniffer)    │
+    └─────────────┘                 └───────────────┘               └───────────────┘
+           │                                │                                │
+    ┌──────┴──────┐                 ┌───────┴───────┐               ┌───────┴───────┐
+    │  Port 8000  │                 │  Port 3443    │               │  Port 5001    │
+    │ Splunk SIEM │                 │  Shuffle SOAR │               │  Shuffle API  │
+    │ (Blue Team) │                 │  (Web UI)     │               │  (Backend)    │
+    └─────────────┘                 └───────────────┘               └───────────────┘
 ```
 
 ---
 
-## 🚀 Quick Start & Installation
+## 💻 VM Configuration & Requirements
 
-### Option 1: Using the Pre-Built Virtual Machine (Recommended)
+| Resource | Minimum | Recommended |
+|:---------|:--------|:------------|
+| **RAM** | 8 GB | 12–16 GB |
+| **CPU** | 2 cores | 4 cores |
+| **Disk** | 40 GB | 60–80 GB |
+| **Network** | Bridged Adapter | Bridged Adapter |
+| **OS** | Ubuntu 22.04 Server | Ubuntu 22.04 Server |
 
-1. **Download the OVF file**: [Cyberrange.ovf](cyberrange%20_docs/Cyberrange.ovf)
-2. Import the OVF into VMware Workstation / VirtualBox.
-3. Power on the VM.
-   - **Username**: `cyberrange`
-   - **Password**: `cyberrange`
-4. **Auto-Start is enabled by default!** Once the VM turns on, CyberRange 2.0 boots all containers and the dashboard automatically.
-5. Access your lab in your browser:
-   - **Dashboard**: `http://<VM_IP>:9000`
+### Container Memory Allocation
 
-### Option 2: Deploying CyberRange 2.0 on Existing Ubuntu / Debian Machine
+| Container | Memory Limit | Purpose |
+|:----------|:-------------|:--------|
+| DVWA | 256 MB | Vulnerable web app (PHP) |
+| OWASP Juice Shop *(Optional Add-on)* | 512 MB | Modern web security target (Node.js) |
+| Splunk Enterprise | 2 GB | SIEM log aggregation |
+| Suricata NIDS | 512 MB | Network packet inspection |
+| Shuffle Frontend | 256 MB | SOAR Web UI |
+| Shuffle Backend | 1 GB | SOAR API server |
+| Shuffle Orborus | 512 MB | SOAR worker manager |
+| Shuffle OpenSearch | 768 MB | SOAR database |
+| **Total (capped)** | **~5.3 GB** | — |
+
+> 💡 With 8GB RAM + 4GB swap, the lab runs comfortably in SSH-only mode. Run `cyberrange optimize` to remove GUI and free up ~2-3 GB extra.
+
+### Pre-Built OVA VM Configuration
+
+| Setting | Value |
+|:--------|:------|
+| **Hypervisor** | VMware Workstation / VirtualBox |
+| **OS** | Ubuntu 22.04 LTS |
+| **Username** | `cyberrange` |
+| **Password** | `cyberrange` |
+| **Network** | Bridged (auto-detects LAN IP) |
+| **SSH** | Enabled (port 22) |
+| **Auto-Start** | CyberRange starts on boot |
+
+---
+
+## 📥 Download & Deploy
+
+### Option 1: Direct OVF Template (Fastest — In Repo)
+
+The pre-configured Open Virtualization Format (OVF) descriptor and manifest are included directly in this repository:
+
+1. **Download**:
+   - 📄 [**`Cyberrange.ovf`**](cyberrange%20_docs/Cyberrange.ovf) (Virtual Machine Definition)
+   - 📜 [**`Cyberrange.mf`**](cyberrange%20_docs/Cyberrange.mf) (SHA Manifest)
+2. **Import** into your hypervisor:
+   - **VMware Workstation**: `File → Open` → select `Cyberrange.ovf`
+   - **VirtualBox**: `File → Import Appliance` → select `Cyberrange.ovf`
+3. Configure RAM (8 GB minimum, 12–16 GB recommended) and set Network to **Bridged Adapter**.
+4. Power on the VM, SSH in:
+   ```bash
+   ssh cyberrange@<VM_IP>
+   # Default password: cyberrange
+   ```
+5. Open your web dashboard: `http://<VM_IP>:9000`
+
+---
+
+### Option 2: Pre-Built Standalone OVA Appliance
+
+For a single standalone `.ova` virtual appliance containing the full pre-installed disk image:
+
+1. **Download**: [📦 **CyberRange 2.0 Standalone OVA**](https://github.com/SumitNayak1337/CyberRange/releases) *(Available on GitHub Releases)*
+2. **Import** directly into VMware Workstation or VirtualBox:
+   - VMware: `File → Open → CyberRange-2.0.ova`
+   - VirtualBox: `File → Import Appliance → CyberRange-2.0.ova`
+3. **Adjust RAM** (minimum 8 GB, 12 GB+ recommended)
+4. **Set Network Adapter** to **Bridged Adapter**
+5. **Power On** the VM
+6. **SSH In**:
+   ```bash
+   ssh cyberrange@<VM_IP>
+   # Password: cyberrange
+   ```
+7. Lab auto-starts! Open dashboard: `http://<VM_IP>:9000`
+
+---
+
+### Option 3: Deploy on Any Existing Ubuntu 22.04 LTS Machine
 
 ```bash
 # Clone the repository
 git clone https://github.com/SumitNayak1337/CyberRange.git
 cd CyberRange/Cyberrange_Programfiles
 
-# Run the master installer (installs Docker, CLI, systemd autostart & MOTD)
+# Run the master installer (installs Docker, CLI, firewall, MOTD, systemd)
 sudo ./install.sh
+
+# (Optional) Optimize for SSH-only mode (removes GUI, sets up swap)
+sudo cyberrange optimize
 ```
 
 ---
 
-## ⚡ Unified CLI Commands (`cyberrange`)
+## ⚡ CLI Commands (`cyberrange`)
 
-After installation, the `cyberrange` command is available anywhere in your terminal:
+After installation, the `cyberrange` command is available globally:
 
-| Command | Action |
-| :--- | :--- |
-| `cyberrange start` | Launches all containers, generates dynamic dashboard, and starts web server |
-| `cyberrange stop` | Gracefully stops all lab containers and web server |
-| `cyberrange restart` | Performs a clean restart cycle |
-| `cyberrange status` | Displays live container status, port health, RAM, and Disk metrics |
-| `cyberrange fix` | **Auto-repairs** Docker, expands LVM disk, cleans bloated logs, fixes ports |
-| `cyberrange banner` | Displays the ASCII Magic splash screen with live URLs and credentials |
-| `cyberrange autostart enable` | Enables automated startup whenever the machine turns on |
-| `cyberrange autostart disable`| Disables automated startup on machine boot |
-| `cyberrange reset` | Destroys all containers, wipes logs/volumes, and restarts fresh |
-
-> 💡 **Legacy script compatibility**: `./lab-start.sh`, `./lab_stop.sh`, `./lab_reset.sh`, and `./expand_disk.sh` continue to work and seamlessly delegate to the `cyberrange` engine.
+| Command | Description |
+|:--------|:------------|
+| `cyberrange start` | Launch all containers + dashboard + web server |
+| `cyberrange stop` | Gracefully stop all services |
+| `cyberrange restart` | Clean restart cycle |
+| `cyberrange status` | Live container health, RAM, disk metrics |
+| `cyberrange fix` | Auto-repair Docker, expand disk, clean logs, fix ports |
+| `cyberrange reset` | Wipe all data/volumes and restart fresh |
+| `cyberrange lab list` | Show available & installed labs |
+| `cyberrange lab add <name>` | Install a new vulnerable lab |
+| `cyberrange lab remove <name>` | Remove a lab and clean up its image |
+| `cyberrange optimize` | Remove GUI, setup swap, clean bloat (SSH-only) |
+| `cyberrange banner` | Display the ASCII splash screen |
+| `cyberrange autostart enable` | Start lab on VM boot |
+| `cyberrange autostart disable` | Disable auto-start on boot |
 
 ---
 
-## 🔄 Automatic Boot Startup (Systemd)
+## 📦 Lab Manager — Add/Remove Labs
 
-CyberRange 2.0 integrates natively with Linux `systemd`:
+CyberRange 2.0 includes a dynamic lab manager. Add or remove vulnerable labs without manually editing config files:
 
-- **Service File**: `/etc/systemd/system/cyberrange.service`
-- **Enable on Boot**:
-  ```bash
-  cyberrange autostart enable
-  # Or natively:
-  sudo systemctl enable cyberrange.service
-  ```
-- **Disable Boot Startup**:
-  ```bash
-  cyberrange autostart disable
-  # Or natively:
-  sudo systemctl disable cyberrange.service
-  ```
-- **Check Boot Service Status**:
-  ```bash
-  cyberrange autostart status
-  ```
+```bash
+# See all available labs
+cyberrange lab list
+
+# Add OWASP Juice Shop
+cyberrange lab add juice-shop
+
+# Add OWASP WebGoat
+cyberrange lab add webgoat
+
+# Remove a lab (stops container + deletes image)
+cyberrange lab remove juice-shop
+```
+
+### Available Lab Catalog
+
+| Lab | Type | Port | RAM | Description |
+|:----|:-----|:-----|:----|:------------|
+| `juice-shop` | 🔴 Red Team | 3000 | 512 MB | OWASP Juice Shop — Modern web security |
+| `webgoat` | 🔴 Red Team | 8080 | 512 MB | OWASP WebGoat — Interactive lessons |
+| `hackazon` | 🔴 Red Team | 8085 | 256 MB | Hackazon — Vulnerable e-commerce |
+| `mutillidae` | 🔴 Red Team | 8086 | 256 MB | OWASP Mutillidae II |
+| `bwapp` | 🔴 Red Team | 8087 | 256 MB | bWAPP — Buggy Web App |
+| `wazuh` | 🔵 Blue Team | 1514 | 1 GB | Wazuh SIEM — Security monitoring |
+| `thehive` | 🔵 Blue Team | 9001 | 1 GB | TheHive — Incident response |
+
+> 💡 **Core services (DVWA, Splunk, Suricata, Shuffle) are always present and cannot be removed.**
 
 ---
 
 ## 🎯 Attack Targets & Defense Tools
 
-### 🔴 Red Team Targets (Offensive)
+### 🔴 Red Team (Offensive)
 
-| Target | URL | Default Credentials | Description |
-| :--- | :--- | :--- | :--- |
-| **DVWA** | `http://<IP>:8081` | `admin` / `password` | PHP/MySQL app for SQLi, XSS, CSRF, and LFI/RFI |
-| **OWASP Juice Shop** | `http://<IP>:3000` | *Self-Register inside app* | Modern Angular/Node app covering the OWASP Top 10 |
+| Target | URL | Description |
+|:-------|:----|:------------|
+| **DVWA** | `http://<IP>:8081` | SQL Injection, XSS, CSRF, File Inclusion, Command Injection |
+| *+ Addon Labs* | *Various ports* | Add more via `cyberrange lab add <name>` |
 
-### 🔵 Blue Team Tools (Defensive)
+### 🔵 Blue Team (Defensive)
 
-| Tool | URL | Default Credentials | Description |
-| :--- | :--- | :--- | :--- |
-| **Splunk Enterprise** | `http://<IP>:8000` | `admin` / `CyberRange@123` | Industry-leading SIEM for log indexing & search |
-| **Splunk HEC** | `http://<IP>:8088` | Token in `.env` | HTTP Event Collector for real-time log ingestion |
-| **Suricata NIDS** | Host Network | Log: `/var/log/suricata/fast.log` | Deep Packet Inspection & intrusion detection engine |
-| **Web Dashboard** | `http://<IP>:9000` | *No auth required* | Central command deck with access cards |
+| Tool | URL | Description |
+|:-----|:----|:------------|
+| **Splunk Enterprise** | `http://<IP>:8000` | SIEM — Log aggregation, correlation, SOC rules |
+| **Splunk HEC** | `http://<IP>:8088` | HTTP Event Collector for real-time log ingestion |
+| **Suricata NIDS** | Host Network | Deep Packet Inspection & intrusion detection |
+
+### ⚡ SOAR (Automation)
+
+| Tool | URL | Description |
+|:-----|:----|:------------|
+| **Shuffle SOAR** | `http://<IP>:3443` | Playbook automation — auto-block, ticket, enrich IOCs |
+| **Shuffle API** | `http://<IP>:5001` | Backend API for workflow automation |
+
+---
+
+## 🔐 Default Credentials
+
+| Service | Username | Password |
+|:--------|:---------|:---------|
+| **VM SSH** | `cyberrange` | `cyberrange` |
+| **DVWA** | `admin` | `password` |
+| **Splunk** | `admin` | `CyberRange@123` |
+| **Shuffle SOAR** | `admin` | `CyberRange@123` |
+| **Shuffle API Key** | — | `cyberrange-shuffle-api-key-2024` |
+| **Dashboard** | — | *No auth required* |
+
+---
+
+## 📦 OVA Export Guide (VMware)
+
+To share this VM as an `.ova` file that anyone can import:
+
+### Method 1: VMware Workstation (GUI)
+
+1. **Shut down** the VM completely (`sudo shutdown -h now`)
+2. In VMware: `File → Export to OVF/OVA...`
+3. Choose **OVA** format (single file, easier to share)
+4. Select destination folder
+5. Click **Export**
+6. Wait for export to complete (may take 10-30 minutes depending on disk size)
+
+### Method 2: Using OVFTool (Command Line)
+
+```powershell
+# Install OVFTool (comes with VMware Workstation)
+# Default location: C:\Program Files (x86)\VMware\VMware Workstation\OVFTool\
+
+# Navigate to OVFTool
+cd "C:\Program Files (x86)\VMware\VMware Workstation\OVFTool"
+
+# Export VMX to OVA
+.\ovftool.exe "D:\Virtual Machines\CyberRange\CyberRange.vmx" "D:\CyberRange-2.0.ova"
+```
+
+> Replace the paths with your actual VM location.
+
+### Method 3: VirtualBox
+
+```bash
+# List VMs
+VBoxManage list vms
+
+# Export to OVA
+VBoxManage export "CyberRange" -o CyberRange-2.0.ova
+```
+
+### Before Exporting — Shrink the OVA Size
+
+SSH into the VM and run these commands to minimize the OVA file size:
+
+```bash
+# 1. Clean up the machine
+sudo cyberrange optimize
+
+# 2. Clean package caches
+sudo apt-get clean && sudo apt-get autoremove -y
+
+# 3. Zero-fill free space (helps compression)
+sudo dd if=/dev/zero of=/zero.fill bs=1M 2>/dev/null || true
+sudo rm -f /zero.fill
+
+# 4. Truncate Docker logs
+sudo sh -c 'truncate -s 0 /var/lib/docker/containers/*/*-json.log'
+
+# 5. Clear bash history
+history -c && cat /dev/null > ~/.bash_history
+
+# 6. Shutdown
+sudo shutdown -h now
+```
+
+Then export from VMware/VirtualBox.
+
+### Importing on Another Machine
+
+1. Download the `.ova` file
+2. **VMware**: `File → Open` → Select `.ova` → `Import`
+3. **VirtualBox**: `File → Import Appliance` → Select `.ova`
+4. Adjust RAM (minimum 8 GB, recommended 12+ GB)
+5. Set network to **Bridged Adapter**
+6. Boot and SSH: `ssh cyberrange@<NEW_IP>`
 
 ---
 
 ## 🔧 Troubleshooting & Auto-Fix
 
-If anything stops working or you run out of disk space, run the automated self-healing command:
-
 ```bash
 cyberrange fix
 ```
 
-`cyberrange fix` automatically performs:
-1. **Docker Engine Health Check**: Restarts Docker socket/daemon if frozen or down.
-2. **Storage Auto-Expansion**: Automatically claims 100% of unallocated disk space on LVM partitions.
-3. **Log & Cache De-bloat**: Truncates runaway Docker container logs and prunes dead cache.
-4. **Port Clearance**: Clears orphaned Python HTTP servers and zombie processes on port 9000.
-5. **Suricata Permissions**: Restores full read/write permissions to `/var/log/suricata`.
-6. **Network & Endpoint Re-binding**: Detects new LAN IP leases and updates the dashboard.
+This auto-repairs:
+- ✅ Docker Engine health — restarts daemon if frozen
+- ✅ LVM disk expansion — claims 100% free space
+- ✅ Docker log de-bloat — truncates runaway logs
+- ✅ Port conflicts — clears zombie processes
+- ✅ Suricata permissions — restores log directory access
+- ✅ Dashboard re-bind — detects new IP and regenerates
+
+### Common Issues
+
+| Problem | Solution |
+|:--------|:---------|
+| Containers not starting | `cyberrange fix` then `cyberrange restart` |
+| Out of disk space | `cyberrange fix` (auto-expands LVM + prunes Docker) |
+| Shuffle database not loading | `sudo chown -R 1000:1000 shuffle-database` then restart |
+| Splunk web not loading | Wait 2-3 minutes after start (Splunk takes time to boot) |
+| High RAM usage | Run `cyberrange optimize` to remove GUI + set up swap |
+| Dashboard shows wrong IP | `cyberrange restart` (re-detects IP) |
+| VM freezing / lagging | Increase RAM to 12-16 GB or run in SSH-only mode |
 
 ---
 
-## 🖼️ Screenshots
+## 🚀 Optimize for Low RAM (SSH-Only)
 
-![Lab Dashboard](cyberrange%20_docs/Screenshot%202026-03-26%20235835.png)
-*CyberRange SOC Lab Dashboard - Main interface showing all services*
+If you have an 8GB RAM host machine or want to maximize performance, CyberRange 2.0 includes a dedicated optimization tool that strips out desktop GUI overhead, removes snap bloat, creates a 4GB swapfile, and tunes the Linux kernel:
 
-![Service Cards](cyberrange%20_docs/Screenshot%202026-03-26%20235902.png)
-*Service cards displaying DVWA, Juice Shop, and Splunk with credentials*
+```bash
+# Run the built-in optimizer
+sudo cyberrange optimize
+```
 
-![Lab Services](cyberrange%20_docs/Screenshot%202026-03-26%20235919.png)
-*Detailed view of running lab services and network configuration*
+### What `cyberrange optimize` does:
+1. **Configures 4GB Swap**: Ensures your VM never crashes from out-of-memory (OOM) killer.
+2. **Swappiness Tuning**: Sets `vm.swappiness=10` so Linux only swaps under real memory pressure.
+3. **Disables GUI Desktop**: Frees up 1.5–2.5 GB of RAM by switching to multi-user (headless) target.
+4. **Purges Unused Packages**: Removes snapd, unattended-upgrades, and redundant background daemons.
+5. **Docker Memory Limits**: Caps each container's RAM usage so no single container starves the system.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to open issues or submit Pull Requests for:
-- Adding new vulnerable labs (e.g., VulnHub/HackTheBox targets, Active Directory labs)
-- Adding new Blue Team tools (e.g., Wazuh, Zeek, Elastic Security, MISP)
-- Enhanced threat simulation scripts (e.g., Caldera, Atomic Red Team)
+Contributions welcome! Submit PRs for:
+- New vulnerable labs (Active Directory, Cloud security labs)
+- New Blue Team tools (Wazuh, Zeek, Elastic, MISP)
+- Threat simulation scripts (Caldera, Atomic Red Team)
+- Dashboard improvements
+- Documentation
 
 ---
 
@@ -207,4 +438,14 @@ This lab contains intentionally vulnerable software. Run it exclusively in isola
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Made with 🛡️ for the cybersecurity community**
+
+`DEFEND & ATTACK RESPONSIBLY`
+
+</div>

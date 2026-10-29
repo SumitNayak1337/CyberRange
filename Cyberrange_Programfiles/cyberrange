@@ -133,12 +133,15 @@ show_dashboard_card() {
     echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "  ${NEON_CYAN}│${NC}  ${NEON_RED}${BOLD}🔴 RED TEAM (Attacker Targets)${NC}"
     echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}DVWA Web App${NC}     → ${NEON_AQUA}http://${ip}:8081${NC}  ${MUTED}[admin / password]${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}OWASP Juice Shop${NC} → ${NEON_AQUA}http://${ip}:3000${NC}  ${MUTED}[Register inside app]${NC}"
     echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "  ${NEON_CYAN}│${NC}  ${NEON_CYAN}${BOLD}🔵 BLUE TEAM (Defense & SIEM)${NC}"
     echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk SIEM${NC}      → ${NEON_AQUA}http://${ip}:8000${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
     echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk HEC${NC}       → ${NEON_AQUA}http://${ip}:8088${NC}  ${MUTED}[HTTP Event Collector]${NC}"
     echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Suricata NIDS${NC}    → ${BRIGHT_GREEN}ACTIVE (Host Mode)${NC} ${MUTED}[/var/log/suricata]${NC}"
+    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}  ${MAGENTA}${BOLD}⚡ SOAR (Shuffle — Automated Response)${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Shuffle SOAR${NC}     → ${NEON_AQUA}http://${ip}:3443${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
+    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Shuffle API${NC}      → ${NEON_AQUA}http://${ip}:5001${NC}  ${MUTED}[Backend API]${NC}"
     echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
     echo -e "  ${NEON_CYAN}│${NC}  ${GOLD}${BOLD}⚡ QUICK MANAGEMENT COMMANDS${NC}"
     echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange status${NC}   ${MUTED}│${NC} Check live container health & resources"
@@ -600,29 +603,11 @@ generate_dashboard() {
             </div>
             <a class="btn-launch" href="http://__LAN_IP__:8081" target="_blank">Launch DVWA ↗</a>
         </div>
+    </div>
 
-        <!-- Juice Shop -->
-        <div class="lab-card" style="--accent-color: var(--neon-yellow);">
-            <div>
-                <div class="card-top">
-                    <span class="card-tag">Modern Web Sec</span>
-                    <span class="ping-pill">● ACTIVE :3000</span>
-                </div>
-                <div class="card-title">OWASP Juice Shop</div>
-                <div class="card-desc">Modern Node.js / Angular architecture. Insecure e-commerce with real-world vulnerabilities and score board.</div>
-                <div class="card-creds">
-                    <div class="cred-row">
-                        <span class="cred-label">Authentication</span>
-                        <span class="cred-val">Self-Register Inside App</span>
-                    </div>
-                    <div class="cred-row">
-                        <span class="cred-label">Score Board</span>
-                        <span class="cred-val">/#/score-board</span>
-                    </div>
-                </div>
-            </div>
-            <a class="btn-launch" href="http://__LAN_IP__:3000" target="_blank">Launch Juice Shop ↗</a>
-        </div>
+    <!-- Add More Labs Info -->
+    <div style="text-align:center; padding:12px; color: var(--text-muted); font-size:0.8rem;">
+        Want more labs? Run: <code style="color:var(--neon-green)">cyberrange lab list</code> to see available labs
     </div>
 
     <!-- Blue Team Defenses -->
@@ -639,7 +624,7 @@ generate_dashboard() {
                     <span class="ping-pill">● ACTIVE :8000</span>
                 </div>
                 <div class="card-title">Splunk Enterprise</div>
-                <div class="card-desc">Core Security Operations platform. Correlate logs, monitor attacks on DVWA/Juice Shop, and build SOC alert rules.</div>
+                <div class="card-desc">Core Security Operations platform. Correlate logs, monitor attacks on DVWA, and build SOC alert rules.</div>
                 <div class="card-creds">
                     <div class="cred-row">
                         <span class="cred-label">Username</span>
@@ -675,6 +660,40 @@ generate_dashboard() {
                 </div>
             </div>
             <button class="btn-launch" onclick="copyText('tail -f /var/log/suricata/fast.log')">Copy Tail Command 📋</button>
+        </div>
+    </div>
+
+    <!-- SOAR Layer -->
+    <div class="section-header">
+        <h2 style="color: var(--neon-purple);">⚡ SOAR — Automated Incident Response</h2>
+        <div class="section-line"></div>
+    </div>
+    <div class="grid">
+        <!-- Shuffle SOAR -->
+        <div class="lab-card" style="--accent-color: var(--neon-purple);">
+            <div>
+                <div class="card-top">
+                    <span class="card-tag">SOAR Platform</span>
+                    <span class="ping-pill">● ACTIVE :3443</span>
+                </div>
+                <div class="card-title">Shuffle SOAR</div>
+                <div class="card-desc">Security Orchestration, Automation & Response. Build playbooks to auto-block attackers, create tickets, enrich IOCs, and notify your SOC team.</div>
+                <div class="card-creds">
+                    <div class="cred-row">
+                        <span class="cred-label">Username</span>
+                        <span class="cred-val">admin</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">Password</span>
+                        <span class="cred-val">CyberRange@123</span>
+                    </div>
+                    <div class="cred-row">
+                        <span class="cred-label">API Key</span>
+                        <span class="cred-val">cyberrange-shuffle-api-key-2024</span>
+                    </div>
+                </div>
+            </div>
+            <a class="btn-launch" href="http://__LAN_IP__:3443" target="_blank">Open Shuffle SOAR ↗</a>
         </div>
     </div>
 
@@ -828,7 +847,7 @@ cmd_status() {
     fi
     
     # Containers Check
-    local containers=("cyberrange_dvwa" "cyberrange_juice" "cyberrange_splunk" "cyberrange_suricata")
+    local containers=("cyberrange_dvwa" "cyberrange_splunk" "cyberrange_suricata" "cyberrange_shuffle_frontend" "cyberrange_shuffle_backend" "cyberrange_shuffle_orborus" "cyberrange_shuffle_db")
     for c in "${containers[@]}"; do
         local status
         status=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo "not running")
@@ -933,13 +952,17 @@ cmd_fix() {
     fi
     echo -e "      ${BRIGHT_GREEN}[✓] Suricata log directory permissions granted.${NC}"
     
-    # 6. Ensure Systemd Autostart Service is Installed
-    echo -e "${WHITE}[6/7] Verifying Systemd Autostart Configuration...${NC}"
+    # 6. Ensure Systemd Service File is Installed (but don't auto-enable)
+    echo -e "${WHITE}[6/7] Verifying Systemd Service Configuration...${NC}"
     if [[ -f "$LAB_DIR/cyberrange.service" ]]; then
         sudo cp "$LAB_DIR/cyberrange.service" /etc/systemd/system/cyberrange.service
         sudo systemctl daemon-reload
-        sudo systemctl enable cyberrange.service 2>/dev/null || true
-        echo -e "      ${BRIGHT_GREEN}[✓] Cyberrange autostart on boot is active.${NC}"
+        echo -e "      ${BRIGHT_GREEN}[✓] Cyberrange service file installed.${NC}"
+        if systemctl is-enabled cyberrange.service &>/dev/null; then
+            echo -e "      ${BRIGHT_GREEN}[✓] Autostart on boot: ENABLED (user-configured).${NC}"
+        else
+            echo -e "      ${YELLOW}[•] Autostart on boot: DISABLED (use 'cyberrange autostart enable' to change).${NC}"
+        fi
     fi
     
     # 7. Restart Lab & Verify Endpoints
@@ -1016,6 +1039,30 @@ cmd_banner() {
     show_dashboard_card "$ip"
 }
 
+# --- Command: LAB ---
+cmd_lab() {
+    resolve_paths
+    local lab_script="$LAB_DIR/cyberrange-lab.sh"
+    if [[ -f "$lab_script" ]]; then
+        bash "$lab_script" "$@"
+    else
+        echo -e "${RED}[!] Lab manager script not found at $lab_script${NC}"
+        exit 1
+    fi
+}
+
+# --- Command: OPTIMIZE ---
+cmd_optimize() {
+    resolve_paths
+    local opt_script="$LAB_DIR/optimize-machine.sh"
+    if [[ -f "$opt_script" ]]; then
+        sudo bash "$opt_script"
+    else
+        echo -e "${RED}[!] Optimize script not found at $opt_script${NC}"
+        exit 1
+    fi
+}
+
 # --- Command: HELP ---
 cmd_help() {
     show_banner
@@ -1027,6 +1074,8 @@ cmd_help() {
     echo -e "    ${NEON_CYAN}status${NC}      Display live container health, open ports, and system metrics"
     echo -e "    ${NEON_CYAN}fix${NC}         Auto-diagnose & repair Docker, LVM disk, logs, and port conflicts"
     echo -e "    ${NEON_CYAN}reset${NC}       Wipe all lab data, volumes, logs, and perform a fresh restart"
+    echo -e "    ${NEON_CYAN}lab${NC}         Manage labs: [list | add <name> | remove <name>]"
+    echo -e "    ${NEON_CYAN}optimize${NC}    Remove GUI bloat, setup swap, clean disk (SSH-only mode)"
     echo -e "    ${NEON_CYAN}banner${NC}      Display the aesthetic ASCII Magic splash screen and endpoints"
     echo -e "    ${NEON_CYAN}autostart${NC}   Manage boot auto-start: [enable | disable | status]"
     echo -e "    ${NEON_CYAN}version${NC}     Display CyberRange version\n"
@@ -1052,6 +1101,13 @@ main() {
             ;;
         reset)
             cmd_reset
+            ;;
+        lab)
+            shift
+            cmd_lab "$@"
+            ;;
+        optimize)
+            cmd_optimize
             ;;
         banner|info)
             cmd_banner

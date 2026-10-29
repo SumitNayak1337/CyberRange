@@ -6,13 +6,7 @@ services:
     ports:
       - "8081:80"
     restart: unless-stopped
-
-  juice-shop:
-    image: bkimminich/juice-shop
-    container_name: cyberrange_juice
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
+    mem_limit: 256m
 
   splunk:
     image: splunk/splunk:latest
@@ -33,6 +27,7 @@ services:
       - /var/log:/host_var_log:ro
       - splunk_data:/opt/splunk/var
     restart: unless-stopped
+    mem_limit: 2g
 
   suricata:
     image: jasonish/suricata:latest
@@ -45,8 +40,99 @@ services:
     volumes:
       - /var/log/suricata:/var/log/suricata
     restart: unless-stopped
+    mem_limit: 512m
+
+  # ──────────────────────────────────────────────────────────────
+  #  SHUFFLE SOAR — Security Orchestration, Automation & Response
+  # ──────────────────────────────────────────────────────────────
+  shuffle-frontend:
+    image: ghcr.io/shuffle/shuffle-frontend:latest
+    container_name: cyberrange_shuffle_frontend
+    hostname: shuffle-frontend
+    ports:
+      - "3443:80"       # Shuffle Web UI (HTTP)
+      - "3444:443"      # Shuffle Web UI (HTTPS)
+    environment:
+      - BACKEND_HOSTNAME=shuffle-backend
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      - shuffle-backend
+
+  shuffle-backend:
+    image: ghcr.io/shuffle/shuffle-backend:latest
+    container_name: cyberrange_shuffle_backend
+    hostname: shuffle-backend
+    ports:
+      - "5001:5001"     # Shuffle Backend API
+    environment:
+      - DATASTORE_EMULATOR_HOST=shuffle-database:9200
+      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
+      - SHUFFLE_FILE_LOCATION=/shuffle-files
+      - SHUFFLE_OPENSEARCH_URL=https://shuffle-database:9200
+      - SHUFFLE_DEFAULT_USERNAME=admin
+      - SHUFFLE_DEFAULT_PASSWORD=CyberRange@123
+      - SHUFFLE_DEFAULT_APIKEY=cyberrange-shuffle-api-key-2024
+      - ORG_ID=cyberrange
+      - SHUFFLE_ELASTIC=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - shuffle_apps:/shuffle-apps
+      - shuffle_files:/shuffle-files
+    restart: unless-stopped
+    mem_limit: 1g
+    depends_on:
+      - shuffle-database
+
+  shuffle-orborus:
+    image: ghcr.io/shuffle/shuffle-orborus:latest
+    container_name: cyberrange_shuffle_orborus
+    hostname: shuffle-orborus
+    environment:
+      - SHUFFLE_APP_SDK_VERSION=latest
+      - SHUFFLE_WORKER_VERSION=latest
+      - BASE_URL=http://shuffle-backend:5001
+      - DOCKER_API_VERSION=1.40
+      - SHUFFLE_BASE_IMAGE_NAME=ghcr.io/shuffle
+      - SHUFFLE_SCALE_REPLICAS=1
+      - ORG_ID=cyberrange
+      - ENVIRONMENT_NAME=CyberRange
+      - CLEANUP=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    mem_limit: 512m
+    depends_on:
+      - shuffle-backend
+
+  shuffle-database:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: cyberrange_shuffle_db
+    hostname: shuffle-database
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m"
+      - bootstrap.memory_lock=true
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.name=shuffle-cluster
+      - node.name=shuffle-node
+      - discovery.type=single-node
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - shuffle_db_data:/usr/share/opensearch/data
+    restart: unless-stopped
+    mem_limit: 768m
 
 volumes:
   splunk_data:
+  shuffle_apps:
+  shuffle_files:
+  shuffle_db_data:
 
-  

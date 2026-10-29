@@ -54,5 +54,5 @@ nohup python3 -m http.server 9000 --directory "$SCRIPT_DIR/dashboard" >/dev/null
 echo -e "${CYN}[+] SUCCESS: CyberRange 2.0 SOC Lab is LIVE!${NC}"
 echo -e "  Main Dashboard  → http://${LAN_IP}:9000"
 echo -e "  DVWA            → http://${LAN_IP}:8081"
-echo -e "  Juice Shop      → http://${LAN_IP}:3000"
 echo -e "  Splunk SIEM     → http://${LAN_IP}:8000"
+echo -e "  Shuffle SOAR    → http://${LAN_IP}:3443  [admin / CyberRange@123]"

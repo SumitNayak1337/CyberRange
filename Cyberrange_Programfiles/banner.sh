@@ -57,7 +57,7 @@ echo -e "  ${NEON_CYAN}│${NC}  ${WHITE}🛡️  WEB DASHBOARD   :${NC} ${NEON_
 echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
 echo -e "  ${NEON_CYAN}│${NC}  ${NEON_RED}${BOLD}🔴 RED TEAM (Attacker Targets)${NC}"
 echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}DVWA Web App${NC}     → ${NEON_AQUA}http://${IP}:8081${NC}  ${MUTED}[admin / password]${NC}"
-echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}OWASP Juice Shop${NC} → ${NEON_AQUA}http://${IP}:3000${NC}  ${MUTED}[Register inside app]${NC}"
+echo -e "  ${NEON_CYAN}│${NC}    ${MUTED}Add more labs: cyberrange lab list${NC}"
 echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
 echo -e "  ${NEON_CYAN}│${NC}  ${NEON_CYAN}${BOLD}🔵 BLUE TEAM (Defense & SIEM)${NC}"
 echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk SIEM${NC}      → ${NEON_AQUA}http://${IP}:8000${NC}  ${MUTED}[admin / CyberRange@123]${NC}"

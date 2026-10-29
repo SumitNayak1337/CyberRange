@@ -1,0 +1,19 @@
+# Virtual Machine Disks and Large Appliance Images (Exceeds GitHub 100MB limit)
+*.vmdk
+*.vmem
+*.nvram
+*.scoreboard
+*.lck
+*.iso
+*.img
+
+# Temporary Screenshot Dumps (already curated inside assets/)
+1.png
+2.png
+3.png
+
+# OS / Editor generated
+.DS_Store
+Thumbs.db
+*.swp
+*.bak

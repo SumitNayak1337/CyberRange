@@ -64,8 +64,9 @@ ufw default deny incoming
 ufw default allow outgoing
 
 # Lab service ports:
-# 22 (SSH), 80 (HTTP), 3000 (Juice Shop), 8000 (Splunk Web), 8081 (DVWA), 8088 (Splunk HEC), 9000 (CyberRange Dashboard)
-for port in 22 80 3000 8000 8081 8088 9000; do
+# 22 (SSH), 80 (HTTP), 8000 (Splunk Web), 8081 (DVWA),
+# 8088 (Splunk HEC), 9000 (Dashboard), 3443/3444 (Shuffle UI), 5001 (Shuffle API)
+for port in 22 80 3443 3444 5001 8000 8081 8088 9000; do
     ufw allow "$port"/tcp
 done
 ufw --force enable
@@ -102,6 +103,8 @@ echo "$SCRIPT_DIR" > /etc/cyberrange/lab_path
 
 chmod +x "$SCRIPT_DIR/cyberrange"
 chmod +x "$SCRIPT_DIR/banner.sh"
+chmod +x "$SCRIPT_DIR/cyberrange-lab.sh" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/optimize-machine.sh" 2>/dev/null || true
 chmod +x "$SCRIPT_DIR"/*.sh 2>/dev/null || true
 
 # Symlink to /usr/local/bin/cyberrange
@@ -109,11 +112,15 @@ ln -sf "$SCRIPT_DIR/cyberrange" /usr/local/bin/cyberrange
 chmod +x /usr/local/bin/cyberrange
 echo -e "${GREEN}[✓] 'cyberrange' CLI command installed into /usr/local/bin/cyberrange${NC}"
 
-print_step "6/8" "Configuring Systemd Autostart on Machine Boot"
+print_step "6/8" "Installing Systemd Service (Manual Start Only)"
 cp "$SCRIPT_DIR/cyberrange.service" /etc/systemd/system/cyberrange.service
 systemctl daemon-reload
-systemctl enable cyberrange.service
-echo -e "${GREEN}[✓] CyberRange 2.0 systemd service ENABLED! (Starts automatically on boot)${NC}"
+# NOTE: Service is installed but NOT enabled by default.
+# Lab starts ONLY when user runs: cyberrange start
+# To enable auto-start on boot: cyberrange autostart enable
+echo -e "${GREEN}[✓] CyberRange 2.0 systemd service installed (disabled by default).${NC}"
+echo -e "${YELLOW}    Lab will NOT auto-start on login/boot. Use 'cyberrange start' to launch.${NC}"
+echo -e "${YELLOW}    To enable boot auto-start: cyberrange autostart enable${NC}"
 
 print_step "7/8" "Installing CyberRange 2.0 ASCII Magic MOTD Login Screen"
 # Install into profile.d so any SSH or tty login gets greeted with the banner
