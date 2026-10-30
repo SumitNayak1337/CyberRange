@@ -38,6 +38,11 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# Clean up any partial or corrupt swapfile immediately to free disk space
+if ! swapon --show | grep -q '/swapfile'; then
+    rm -f /swapfile 2>/dev/null || true
+fi
+
 echo ""
 echo -e "${NEON_CYAN}══════════════════════════════════════════════════════════════════════════════${NC}"
 echo -e "${WHITE}${BOLD}  CYBERRANGE 2.0 // JUICE SHOP REMOVAL & SIMULATION TUNER (12GB / 60GB)${NC}"
@@ -162,19 +167,22 @@ net.ipv4.tcp_tw_reuse = 1
 SYSCTL_EOF
 sysctl -p /etc/sysctl.d/99-cyberrange.conf 2>/dev/null || true
 
-# Setup 4GB swap space to ensure 100% stability
+# Setup swap space safely (only if not active and enough disk space)
+FREE_MB=$(df -m / | awk 'NR==2 {print $4}')
 if swapon --show | grep -q '/swapfile'; then
     echo -e "  ${BRIGHT_GREEN}[✓] Swap file already active.${NC}"
-else
-    echo -e "  ${NEON_AQUA}[*] Creating 4GB swap file for extra safety...${NC}"
-    fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none
-    chmod 600 /swapfile
-    mkswap /swapfile >/dev/null 2>&1
+elif [[ "$FREE_MB" -gt 6000 ]]; then
+    echo -e "  ${NEON_AQUA}[*] Creating 2GB swap file for extra safety...${NC}"
+    fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none 2>/dev/null || true
+    chmod 600 /swapfile 2>/dev/null || true
+    mkswap /swapfile >/dev/null 2>&1 || true
     swapon /swapfile 2>/dev/null || true
-    if ! grep -q '/swapfile' /etc/fstab; then
+    if ! grep -q '/swapfile' /etc/fstab 2>/dev/null; then
         echo '/swapfile none swap sw 0 0' >> /etc/fstab
     fi
-    echo -e "  ${BRIGHT_GREEN}[✓] 4GB swap created and active.${NC}"
+    echo -e "  ${BRIGHT_GREEN}[✓] Swap configured and active.${NC}"
+else
+    echo -e "  ${MUTED}[i] 12GB RAM present, skipping swap creation to preserve disk.${NC}"
 fi
 
 # Ensure Suricata logging directory has full permissions for live alert ingestion
@@ -447,16 +455,15 @@ echo -e "${GOLD}[6/6] Launching Containers and Web Dashboard...${NC}"
 # Clean port 9000
 pkill -f "python3 -m http.server 9000" 2>/dev/null || true
 
-# Launch containers
-if docker compose version &>/dev/null; then
-    (cd "$LAB_DIR" && docker compose up -d)
-elif command -v docker-compose &>/dev/null; then
-    (cd "$LAB_DIR" && docker-compose up -d)
-fi
-
-# Regenerate dashboard with live IP
+# Start everything via main cyberrange CLI
 if [[ -x "$LAB_DIR/cyberrange" ]]; then
-    "$LAB_DIR/cyberrange" start --quiet 2>/dev/null || true
+    "$LAB_DIR/cyberrange" start
+elif command -v cyberrange &>/dev/null; then
+    cyberrange start
+else
+    (cd "$LAB_DIR" && docker compose up -d)
+    mkdir -p "$LAB_DIR/dashboard"
+    nohup python3 -m http.server 9000 --directory "$LAB_DIR/dashboard" >/dev/null 2>&1 &
 fi
 
 echo ""
@@ -470,3 +477,4 @@ echo ""
 df -h / | awk 'NR<=2 {print "    " $0}'
 echo ""
 "$LAB_DIR/banner.sh"
+
