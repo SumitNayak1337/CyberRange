@@ -1,13 +1,19 @@
 services:
 
+  # ──────────────────────────────────────────────────────────────
+  #  RED TEAM TARGET — Damn Vulnerable Web Application
+  # ──────────────────────────────────────────────────────────────
   dvwa:
     image: vulnerables/web-dvwa
     container_name: cyberrange_dvwa
     ports:
       - "8081:80"
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
 
+  # ──────────────────────────────────────────────────────────────
+  #  BLUE TEAM SIEM — Splunk Enterprise (Core Log Correlation)
+  # ──────────────────────────────────────────────────────────────
   splunk:
     image: splunk/splunk:latest
     container_name: cyberrange_splunk
@@ -27,8 +33,11 @@ services:
       - /var/log:/host_var_log:ro
       - splunk_data:/opt/splunk/var
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 4g
 
+  # ──────────────────────────────────────────────────────────────
+  #  BLUE TEAM NIDS — Suricata (Live Packet Inspection)
+  # ──────────────────────────────────────────────────────────────
   suricata:
     image: jasonish/suricata:latest
     container_name: cyberrange_suricata
@@ -40,7 +49,7 @@ services:
     volumes:
       - /var/log/suricata:/var/log/suricata
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 1g
 
   # ──────────────────────────────────────────────────────────────
   #  SHUFFLE SOAR — Security Orchestration, Automation & Response
@@ -55,7 +64,7 @@ services:
     environment:
       - BACKEND_HOSTNAME=shuffle-backend
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     depends_on:
       - shuffle-backend
 
@@ -80,7 +89,7 @@ services:
       - shuffle_apps:/shuffle-apps
       - shuffle_files:/shuffle-files
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     depends_on:
       - shuffle-database
 
@@ -110,7 +119,7 @@ services:
     container_name: cyberrange_shuffle_db
     hostname: shuffle-database
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m"
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
       - bootstrap.memory_lock=true
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
@@ -128,11 +137,10 @@ services:
     volumes:
       - shuffle_db_data:/usr/share/opensearch/data
     restart: unless-stopped
-    mem_limit: 768m
+    mem_limit: 1536m
 
 volumes:
   splunk_data:
   shuffle_apps:
   shuffle_files:
   shuffle_db_data:
-

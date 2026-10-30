@@ -113,7 +113,7 @@ services:
     ports:
       - "8081:80"
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
 
   splunk:
     image: splunk/splunk:latest
@@ -134,7 +134,7 @@ services:
       - /var/log:/host_var_log:ro
       - splunk_data:/opt/splunk/var
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 4g
 
   suricata:
     image: jasonish/suricata:latest
@@ -147,7 +147,7 @@ services:
     volumes:
       - /var/log/suricata:/var/log/suricata
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 1g
 
   shuffle-frontend:
     image: ghcr.io/shuffle/shuffle-frontend:latest
@@ -159,7 +159,7 @@ services:
     environment:
       - BACKEND_HOSTNAME=shuffle-backend
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     depends_on:
       - shuffle-backend
 
@@ -184,7 +184,7 @@ services:
       - shuffle_apps:/shuffle-apps
       - shuffle_files:/shuffle-files
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     depends_on:
       - shuffle-database
 
@@ -214,7 +214,7 @@ services:
     container_name: cyberrange_shuffle_db
     hostname: shuffle-database
     environment:
-      - "OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m"
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
       - bootstrap.memory_lock=true
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
@@ -232,7 +232,7 @@ services:
     volumes:
       - shuffle_db_data:/usr/share/opensearch/data
     restart: unless-stopped
-    mem_limit: 768m
+    mem_limit: 1536m
 
 volumes:
   splunk_data:
@@ -241,7 +241,7 @@ volumes:
   shuffle_db_data:
 COMPOSE_EOF
 
-echo -e "${GREEN}  [✓] docker-compose.yml updated (memory-limited, no Juice Shop).${NC}"
+echo -e "${GREEN}  [✓] docker-compose.yml updated (12GB allocation, Splunk 4GB, no Juice Shop).${NC}"
 
 # ──────────────────────────────────────────────────────────────────
 #  PHASE 4: CREATE LAB MANAGER SCRIPT
@@ -540,10 +540,11 @@ if ! grep -q 'CyberRange Optimizations' /etc/sysctl.conf 2>/dev/null; then
     cat >> /etc/sysctl.conf << 'SYSCTL_EOF'
 
 # CyberRange Optimizations
+vm.max_map_count = 262144
 vm.dirty_ratio = 10
 vm.dirty_background_ratio = 5
 vm.vfs_cache_pressure = 50
-net.core.somaxconn = 1024
+net.core.somaxconn = 2048
 net.ipv4.tcp_tw_reuse = 1
 SYSCTL_EOF
 fi
@@ -557,11 +558,18 @@ echo -e "${GREEN}  [✓] Services disabled, kernel tuned.${NC}"
 echo ""
 echo -e "${CYAN}${BOLD}[PHASE 10/10] Patching CyberRange CLI, Banner & Firewall...${NC}"
 
-# --- Patch banner.sh: remove Juice Shop line ---
+# --- Update clean banner & MOTD (No ASCII art) ---
 if [[ -f "$BANNER_SH" ]]; then
-    sed -i '/OWASP Juice Shop/d' "$BANNER_SH"
-    sed -i '/Juice Shop/d' "$BANNER_SH"
-    echo -e "${GREEN}  [✓] banner.sh patched (Juice Shop removed).${NC}"
+    chmod +x "$BANNER_SH"
+    if [[ -d "/etc/update-motd.d" ]]; then
+        chmod -x /etc/update-motd.d/10-help-text 2>/dev/null || true
+        chmod -x /etc/update-motd.d/50-motd-news 2>/dev/null || true
+        chmod -x /etc/update-motd.d/88-esm-announce 2>/dev/null || true
+        chmod -x /etc/update-motd.d/91-release-upgrade 2>/dev/null || true
+        cp "$BANNER_SH" /etc/update-motd.d/99-cyberrange 2>/dev/null || true
+        chmod +x /etc/update-motd.d/99-cyberrange 2>/dev/null || true
+    fi
+    echo -e "${GREEN}  [✓] banner.sh and SSH MOTD updated (clean endpoints, zero ASCII art).${NC}"
 fi
 
 # --- Patch cyberrange CLI: remove Juice Shop from status containers list ---

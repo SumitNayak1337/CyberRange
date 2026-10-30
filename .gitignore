@@ -11,6 +11,8 @@
 1.png
 2.png
 3.png
+Screenshot *.png
+*.png.bak
 
 # OS / Editor generated
 .DS_Store

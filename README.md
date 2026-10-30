@@ -112,21 +112,20 @@
 | **Network** | Bridged Adapter | Bridged Adapter |
 | **OS** | Ubuntu 22.04 Server | Ubuntu 22.04 Server |
 
-### Container Memory Allocation
+### Container Memory Allocation (12 GB RAM Profile)
 
 | Container | Memory Limit | Purpose |
 |:----------|:-------------|:--------|
-| DVWA | 256 MB | Vulnerable web app (PHP) |
-| OWASP Juice Shop *(Optional Add-on)* | 512 MB | Modern web security target (Node.js) |
-| Splunk Enterprise | 2 GB | SIEM log aggregation |
-| Suricata NIDS | 512 MB | Network packet inspection |
-| Shuffle Frontend | 256 MB | SOAR Web UI |
-| Shuffle Backend | 1 GB | SOAR API server |
-| Shuffle Orborus | 512 MB | SOAR worker manager |
-| Shuffle OpenSearch | 768 MB | SOAR database |
-| **Total (capped)** | **~5.3 GB** | — |
+| **DVWA** | 512 MB | Vulnerable web target (PHP/MySQL) |
+| **Splunk Enterprise** | 4 GB | Core SIEM log correlation & HEC ingestion |
+| **Suricata NIDS** | 1 GB | Network packet inspection (Host Mode) |
+| **Shuffle Database** (OpenSearch) | 1.5 GB *(1GB JVM)* | SOAR workflow database |
+| **Shuffle Backend** | 1.5 GB | SOAR automation engine & API server |
+| **Shuffle Frontend** | 512 MB | SOAR Web UI |
+| **Shuffle Orborus** | 512 MB | SOAR worker manager |
+| **Total (Containers)** | **~9.6 GB** | Leaves ~2.5 GB host RAM + 4 GB swap for OS & SSH |
 
-> 💡 With 8GB RAM + 4GB swap, the lab runs comfortably in SSH-only mode. Run `cyberrange optimize` to remove GUI and free up ~2-3 GB extra.
+> 💡 With 12 GB RAM and 60 GB disk allocated, Splunk and Shuffle OpenSearch run at peak performance with zero memory pressure. To apply this profile and purge Juice Shop, run: `sudo bash remove-juiceshop.sh`.
 
 ### Pre-Built OVA VM Configuration
 

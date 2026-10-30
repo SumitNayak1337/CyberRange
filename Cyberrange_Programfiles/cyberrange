@@ -111,44 +111,34 @@ get_docker_compose() {
     fi
 }
 
-# --- ASCII Magic Banner ---
+# --- Clean Header (No ASCII art font) ---
 show_banner() {
-    echo -e "${NEON_CYAN}   ______      __             ____                          ___     ____  ${NC}"
-    echo -e "${NEON_AQUA}  / ____/_  __/ /_  ___  ____/ __ \\____ _____  ____ ____   |__ \\   / __ \\ ${NC}"
-    echo -e "${NEON_GREEN} / /   / / / / __ \\/ _ \\/ __/ /_/ / __ \`/ __ \\/ __ \`/ _ \\  __/ /  / / / / ${NC}"
-    echo -e "${BRIGHT_GREEN}/ /___/ /_/ / /_/ /  __/ / / _, _/ /_/ / / / / /_/ /  __/ / __/_ / /_/ /  ${NC}"
-    echo -e "${ELECTRIC_GREEN}\\____/\\__, /_.___/\\___/_/ /_/ |_|\\__,_/_/ /_/\\__, /\\___/ /____/(_)____/   ${NC}"
-    echo -e "${MUTED}     /____/                                 /____/                        ${NC}"
-    echo -e "       ${BOLD}${WHITE}S E C U R I T Y   O P E R A T I O N S   C E N T E R   L A B${NC}"
-    echo -e "       ${MUTED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${NEON_CYAN}══════════════════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${WHITE}${BOLD}  CYBERRANGE 2.0 // SOC SIMULATION LAB (12GB RAM · 60GB DISK)${NC}"
+    echo -e "${NEON_CYAN}══════════════════════════════════════════════════════════════════════════════${NC}"
 }
 
 # --- Interactive System Information Card ---
 show_dashboard_card() {
     local ip="$1"
-    echo ""
-    echo -e "  ${NEON_CYAN}╭────────────────────────────────────────────────────────────────────────────╮${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${WHITE}🌐 HOST IP ADDRESS :${NC} ${NEON_YELLOW}${BOLD}${ip}${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${WHITE}🛡️  WEB DASHBOARD   :${NC} ${NEON_AQUA}${BOLD}http://${ip}:9000${NC}"
-    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${NEON_RED}${BOLD}🔴 RED TEAM (Attacker Targets)${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}DVWA Web App${NC}     → ${NEON_AQUA}http://${ip}:8081${NC}  ${MUTED}[admin / password]${NC}"
-    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${NEON_CYAN}${BOLD}🔵 BLUE TEAM (Defense & SIEM)${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk SIEM${NC}      → ${NEON_AQUA}http://${ip}:8000${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Splunk HEC${NC}       → ${NEON_AQUA}http://${ip}:8088${NC}  ${MUTED}[HTTP Event Collector]${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Suricata NIDS${NC}    → ${BRIGHT_GREEN}ACTIVE (Host Mode)${NC} ${MUTED}[/var/log/suricata]${NC}"
-    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${MAGENTA}${BOLD}⚡ SOAR (Shuffle — Automated Response)${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Shuffle SOAR${NC}     → ${NEON_AQUA}http://${ip}:3443${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    • ${WHITE}Shuffle API${NC}      → ${NEON_AQUA}http://${ip}:5001${NC}  ${MUTED}[Backend API]${NC}"
-    echo -e "  ${NEON_CYAN}├────────────────────────────────────────────────────────────────────────────┤${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}  ${GOLD}${BOLD}⚡ QUICK MANAGEMENT COMMANDS${NC}"
-    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange status${NC}   ${MUTED}│${NC} Check live container health & resources"
-    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange fix${NC}      ${MUTED}│${NC} Self-healing auto-repair & disk expander"
-    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange stop${NC}     ${MUTED}│${NC} Gracefully shutdown lab containers"
-    echo -e "  ${NEON_CYAN}│${NC}    ${WHITE}cyberrange restart${NC}  ${MUTED}│${NC} Quick restart all services"
-    echo -e "  ${NEON_CYAN}╰────────────────────────────────────────────────────────────────────────────╯${NC}"
+    echo -e "  ${WHITE}🌐 HOST IP ADDRESS :${NC} ${NEON_YELLOW}${BOLD}${ip}${NC}"
+    echo -e "  ${WHITE}🛡️  WEB DASHBOARD   :${NC} ${NEON_AQUA}${BOLD}http://${ip}:9000${NC}"
+    echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
+    echo -e "  ${NEON_RED}${BOLD}🔴 RED TEAM (Target)${NC}"
+    echo -e "    • ${WHITE}DVWA Web App${NC}     → ${NEON_AQUA}http://${ip}:8081${NC}  ${MUTED}[admin / password]${NC}"
+    echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
+    echo -e "  ${NEON_CYAN}${BOLD}🔵 BLUE TEAM (SIEM & Detection)${NC}"
+    echo -e "    • ${WHITE}Splunk SIEM${NC}      → ${NEON_AQUA}http://${ip}:8000${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
+    echo -e "    • ${WHITE}Splunk HEC${NC}       → ${NEON_AQUA}http://${ip}:8088${NC}  ${MUTED}[HTTP Event Collector]${NC}"
+    echo -e "    • ${WHITE}Suricata NIDS${NC}    → ${BRIGHT_GREEN}ACTIVE (Host Mode)${NC} ${MUTED}[/var/log/suricata/eve.json]${NC}"
+    echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
+    echo -e "  ${MAGENTA}${BOLD}⚡ SOAR (Automation & Response)${NC}"
+    echo -e "    • ${WHITE}Shuffle SOAR${NC}     → ${NEON_AQUA}http://${ip}:3443${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
+    echo -e "    • ${WHITE}Shuffle API${NC}      → ${NEON_AQUA}http://${ip}:5001${NC}  ${MUTED}[Backend API]${NC}"
+    echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
+    echo -e "  ${WHITE}${BOLD}COMMANDS:${NC} ${NEON_CYAN}cyberrange status${NC} | ${NEON_CYAN}start${NC} | ${NEON_CYAN}stop${NC} | ${NEON_CYAN}restart${NC} | ${NEON_CYAN}fix${NC}"
+    echo -e "${NEON_CYAN}══════════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
 }
 
@@ -916,14 +906,16 @@ cmd_fix() {
     fi
     
     # 3. Check & Expand Disk / Clean Space
-    echo -e "${WHITE}[3/7] Optimizing Storage & Expanding Disk...${NC}"
+    echo -e "${WHITE}[3/7] Optimizing Storage & Expanding Disk (60GB Allocation)...${NC}"
+    # Resize physical volume first (so LVM recognizes the full 60GB disk expansion)
+    sudo pvresize /dev/sda3 2>/dev/null || sudo pvresize /dev/sda2 2>/dev/null || sudo pvresize /dev/sda 2>/dev/null || sudo pvresize /dev/nvme0n1p3 2>/dev/null || true
     # Expand LVM if available
     local root_lv
     root_lv=$(df / | tail -1 | awk '{print $1}')
     if [[ "$root_lv" == *"/dev/mapper/"* ]]; then
         echo -e "      ${NEON_AQUA}[*] LVM Partition detected ($root_lv). Reclaiming 100% free space...${NC}"
         sudo lvextend -l +100%FREE "$root_lv" 2>/dev/null || true
-        sudo resize2fs "$root_lv" 2>/dev/null || true
+        sudo resize2fs "$root_lv" 2>/dev/null || sudo xfs_growfs / 2>/dev/null || true
     fi
     
     # Truncate runaway Docker logs
@@ -943,14 +935,16 @@ cmd_fix() {
     fi
     echo -e "      ${BRIGHT_GREEN}[✓] Port 9000 cleared for Dashboard.${NC}"
     
-    # 5. Fix Directory & Suricata Permissions
-    echo -e "${WHITE}[5/7] Verifying System Permissions & Log Dirs...${NC}"
+    # 5. Fix Directory & Suricata Permissions + OpenSearch sysctl
+    echo -e "${WHITE}[5/7] Verifying System Permissions, Kernel & Log Dirs...${NC}"
     sudo mkdir -p /var/log/suricata
     sudo chmod -R 777 /var/log/suricata
+    # Set required virtual memory map count for Shuffle Database (OpenSearch)
+    sudo sysctl -w vm.max_map_count=262144 2>/dev/null || true
     if [[ -d "$LAB_DIR" ]]; then
         chmod +x "$LAB_DIR"/*.sh 2>/dev/null || true
     fi
-    echo -e "      ${BRIGHT_GREEN}[✓] Suricata log directory permissions granted.${NC}"
+    echo -e "      ${BRIGHT_GREEN}[✓] Suricata & OpenSearch kernel settings verified.${NC}"
     
     # 6. Ensure Systemd Service File is Installed (but don't auto-enable)
     echo -e "${WHITE}[6/7] Verifying Systemd Service Configuration...${NC}"

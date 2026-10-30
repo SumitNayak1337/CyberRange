@@ -122,22 +122,27 @@ echo -e "${GREEN}[✓] CyberRange 2.0 systemd service installed (disabled by def
 echo -e "${YELLOW}    Lab will NOT auto-start on login/boot. Use 'cyberrange start' to launch.${NC}"
 echo -e "${YELLOW}    To enable boot auto-start: cyberrange autostart enable${NC}"
 
-print_step "7/8" "Installing CyberRange 2.0 ASCII Magic MOTD Login Screen"
-# Install into profile.d so any SSH or tty login gets greeted with the banner
+print_step "7/8" "Configuring Clean, Fast SSH Login MOTD (No ASCII Art Spam)"
+# Silence Ubuntu default MOTD bloat so login is fast and clean
+if [ -d /etc/update-motd.d ]; then
+    chmod -x /etc/update-motd.d/10-help-text 2>/dev/null || true
+    chmod -x /etc/update-motd.d/50-motd-news 2>/dev/null || true
+    chmod -x /etc/update-motd.d/88-esm-announce 2>/dev/null || true
+    chmod -x /etc/update-motd.d/91-release-upgrade 2>/dev/null || true
+    chmod -x /etc/update-motd.d/95-hwe-eol 2>/dev/null || true
+    cp "$SCRIPT_DIR/banner.sh" /etc/update-motd.d/99-cyberrange 2>/dev/null || true
+    chmod +x /etc/update-motd.d/99-cyberrange 2>/dev/null || true
+fi
+
+# Install into profile.d so any interactive SSH shell shows the endpoints
 cat << 'EOF' > /etc/profile.d/cyberrange-banner.sh
-# CyberRange 2.0 Interactive MOTD
+# CyberRange 2.0 Clean Terminal MOTD
 if [ -n "$PS1" ] && [ -x /usr/local/bin/cyberrange ]; then
     /usr/local/bin/cyberrange banner
 fi
 EOF
 chmod +x /etc/profile.d/cyberrange-banner.sh
-
-# Also hook into update-motd.d if directory exists
-if [ -d /etc/update-motd.d ]; then
-    cp "$SCRIPT_DIR/banner.sh" /etc/update-motd.d/99-cyberrange 2>/dev/null || true
-    chmod +x /etc/update-motd.d/99-cyberrange 2>/dev/null || true
-fi
-echo -e "${GREEN}[✓] ASCII Magic Banner installed for SSH and console login.${NC}"
+echo -e "${GREEN}[✓] Clean terminal endpoint directory configured for SSH login.${NC}"
 
 print_step "8/8" "Initializing CyberRange 2.0 Environment"
 echo -e "${YELLOW}[*] Launching CyberRange services for the first time...${NC}"
