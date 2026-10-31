@@ -137,9 +137,10 @@ if [[ "$ROOT_DEV" == *"/dev/mapper/"* ]]; then
     resize2fs "$ROOT_DEV" 2>/dev/null || xfs_growfs / 2>/dev/null || true
 fi
 
-# Clean Docker garbage
+# Clean Docker dangling garbage without removing base images
 sh -c 'truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null' || true
-docker system prune -af 2>/dev/null || true
+docker container prune -f 2>/dev/null || true
+docker image prune -f 2>/dev/null || true
 
 DISK_FREE=$(df -h / | awk 'NR==2 {print $4}')
 echo -e "${GREEN}  [✓] Disk expanded. Free space: ${WHITE}$DISK_FREE${NC}"
@@ -483,7 +484,7 @@ fi
 
 # Start containers
 cd "$LAB_DIR"
-docker compose up -d 2>/dev/null || docker-compose up -d 2>/dev/null || true
+docker compose up -d || docker-compose up -d || true
 
 # Start dashboard web server
 pkill -f "python3 -m http.server 9000" 2>/dev/null || true
@@ -530,3 +531,4 @@ echo -e "    Suricata   → /var/log/suricata/eve.json"
 echo ""
 echo -e "  ${YELLOW}Note: Splunk takes 2-3 mins to fully boot. Shuffle may take 1-2 mins.${NC}"
 echo ""
+
