@@ -173,7 +173,7 @@ services:
       - DATASTORE_EMULATOR_HOST=shuffle-database:9200
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - SHUFFLE_OPENSEARCH_URL=https://shuffle-database:9200
+      - SHUFFLE_OPENSEARCH_URL=http://shuffle-database:9200
       - SHUFFLE_DEFAULT_USERNAME=admin
       - SHUFFLE_DEFAULT_PASSWORD=CyberRange@123
       - SHUFFLE_DEFAULT_APIKEY=cyberrange-shuffle-api-key-2024
@@ -215,7 +215,7 @@ services:
     hostname: shuffle-database
     environment:
       - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
-      - bootstrap.memory_lock=true
+      - bootstrap.memory_lock=false
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-node
