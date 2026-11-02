@@ -248,96 +248,8 @@ services:
     restart: unless-stopped
     mem_limit: ${SURICATA_MEM}
 
-  shuffle-frontend:
-    image: ghcr.io/shuffle/shuffle-frontend:latest
-    container_name: cyberrange_shuffle_frontend
-    hostname: shuffle-frontend
-    ports:
-      - "3443:80"
-      - "3444:443"
-    environment:
-      - BACKEND_HOSTNAME=shuffle-backend
-    restart: unless-stopped
-    mem_limit: ${SHUF_FRONT}
-    depends_on:
-      - shuffle-backend
-
-  shuffle-backend:
-    image: ghcr.io/shuffle/shuffle-backend:latest
-    container_name: cyberrange_shuffle_backend
-    hostname: shuffle-backend
-    ports:
-      - "5001:5001"
-    environment:
-      - DATASTORE_EMULATOR_HOST=shuffle-database:9200
-      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
-      - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - SHUFFLE_OPENSEARCH_URL=http://shuffle-database:9200
-      - SHUFFLE_DEFAULT_USERNAME=admin
-      - SHUFFLE_DEFAULT_PASSWORD=CyberRange@123
-      - SHUFFLE_DEFAULT_APIKEY=cyberrange-shuffle-api-key-2024
-      - ORG_ID=cyberrange
-      - SHUFFLE_ELASTIC=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - shuffle_apps:/shuffle-apps
-      - shuffle_files:/shuffle-files
-    restart: unless-stopped
-    mem_limit: ${SHUF_BACK}
-    depends_on:
-      - shuffle-database
-
-  shuffle-orborus:
-    image: ghcr.io/shuffle/shuffle-orborus:latest
-    container_name: cyberrange_shuffle_orborus
-    hostname: shuffle-orborus
-    environment:
-      - SHUFFLE_APP_SDK_VERSION=latest
-      - SHUFFLE_WORKER_VERSION=latest
-      - BASE_URL=http://shuffle-backend:5001
-      - DOCKER_API_VERSION=1.40
-      - SHUFFLE_BASE_IMAGE_NAME=ghcr.io/shuffle
-      - SHUFFLE_SCALE_REPLICAS=1
-      - ORG_ID=cyberrange
-      - ENVIRONMENT_NAME=CyberRange
-      - CLEANUP=true
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
-    mem_limit: ${SHUF_ORB}
-    depends_on:
-      - shuffle-backend
-
-  shuffle-database:
-    image: opensearchproject/opensearch:2.14.0
-    container_name: cyberrange_shuffle_db
-    hostname: shuffle-database
-    environment:
-      - "OPENSEARCH_JAVA_OPTS=${SHUF_DB_HEAP}"
-      - bootstrap.memory_lock=false
-      - cluster.routing.allocation.disk.threshold_enabled=false
-      - cluster.name=shuffle-cluster
-      - node.name=shuffle-node
-      - discovery.type=single-node
-      - DISABLE_INSTALL_DEMO_CONFIG=true
-      - DISABLE_SECURITY_PLUGIN=true
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    volumes:
-      - shuffle_db_data:/usr/share/opensearch/data
-    restart: unless-stopped
-    mem_limit: ${SHUF_DB}
-
 volumes:
   splunk_data:
-  shuffle_apps:
-  shuffle_files:
-  shuffle_db_data:
 COMPOSE_EOF
 
 echo -e "${GREEN}  [✓] docker-compose.yml written (Splunk=${SPLUNK_MEM}, Suricata=${SURICATA_MEM}).${NC}"
@@ -364,8 +276,6 @@ echo -e "  ${RED}${BOLD}RED${NC}  DVWA         ${AQUA}http://${IP}:8081${NC}  ${
 echo -e "  ${CYAN}${BOLD}BLUE${NC} Splunk SIEM  ${AQUA}http://${IP}:8000${NC}  ${MUTED}admin / CyberRange@123${NC}"
 echo -e "       Splunk HEC  ${AQUA}http://${IP}:8088${NC}"
 echo -e "       Suricata    ${GREEN}ACTIVE${NC} ${MUTED}/var/log/suricata/eve.json${NC}"
-echo -e "  ${MAG}${BOLD}SOAR${NC} Shuffle     ${AQUA}http://${IP}:3443${NC}  ${MUTED}admin / CyberRange@123${NC}"
-echo -e "       Shuffle API ${AQUA}http://${IP}:5001${NC}"
 echo -e "${MUTED}  ─────────────────────────────────────────────────────────────────${NC}"
 echo -e "  ${MUTED}cyberrange start | stop | status | fix | restart${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
@@ -454,16 +364,6 @@ cat > "$DASH_DIR/index.html" << DASHEOF
   </div>
 </div>
 
-<div class="section">⚡ SOAR — Automated Response</div>
-<div class="grid">
-  <div class="card" style="--c:#bd00ff">
-    <h3>Shuffle SOAR</h3>
-    <p>Playbook automation — auto-block, ticketing, IOC enrichment</p>
-    <div class="cred"><b>admin</b> / <b>CyberRange@123</b> · API Key: <b>cyberrange-shuffle-api-key-2024</b></div>
-    <a class="btn" href="http://${HOST_IP}:3443" target="_blank">Open Shuffle ↗</a>
-  </div>
-</div>
-
 </body>
 </html>
 DASHEOF
@@ -505,9 +405,7 @@ echo ""
 
 # Show container status
 echo -e "  ${WHITE}CONTAINERS:${NC}"
-for c in cyberrange_dvwa cyberrange_splunk cyberrange_suricata \
-         cyberrange_shuffle_frontend cyberrange_shuffle_backend \
-         cyberrange_shuffle_orborus cyberrange_shuffle_db; do
+for c in cyberrange_dvwa cyberrange_splunk cyberrange_suricata; do
     st=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo "not found")
     if [[ "$st" == "running" ]]; then
         echo -e "    ${GREEN}[✓]${NC} $c"
@@ -526,9 +424,8 @@ echo -e "  ${WHITE}ACCESS:${NC}"
 echo -e "    Dashboard  → ${CYAN}http://${HOST_IP}:9000${NC}"
 echo -e "    DVWA       → ${CYAN}http://${HOST_IP}:8081${NC}  (admin / password)"
 echo -e "    Splunk     → ${CYAN}http://${HOST_IP}:8000${NC}  (admin / CyberRange@123)"
-echo -e "    Shuffle    → ${CYAN}http://${HOST_IP}:3443${NC}  (admin / CyberRange@123)"
 echo -e "    Suricata   → /var/log/suricata/eve.json"
 echo ""
-echo -e "  ${YELLOW}Note: Splunk takes 2-3 mins to fully boot. Shuffle may take 1-2 mins.${NC}"
+echo -e "  ${YELLOW}Note: Splunk takes 2-3 mins to fully boot.${NC}"
 echo ""
 

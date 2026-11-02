@@ -133,10 +133,6 @@ show_dashboard_card() {
     echo -e "    • ${WHITE}Splunk HEC${NC}       → ${NEON_AQUA}http://${ip}:8088${NC}  ${MUTED}[HTTP Event Collector]${NC}"
     echo -e "    • ${WHITE}Suricata NIDS${NC}    → ${BRIGHT_GREEN}ACTIVE (Host Mode)${NC} ${MUTED}[/var/log/suricata/eve.json]${NC}"
     echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
-    echo -e "  ${MAGENTA}${BOLD}⚡ SOAR (Automation & Response)${NC}"
-    echo -e "    • ${WHITE}Shuffle SOAR${NC}     → ${NEON_AQUA}http://${ip}:3443${NC}  ${MUTED}[admin / CyberRange@123]${NC}"
-    echo -e "    • ${WHITE}Shuffle API${NC}      → ${NEON_AQUA}http://${ip}:5001${NC}  ${MUTED}[Backend API]${NC}"
-    echo -e "  ${MUTED}────────────────────────────────────────────────────────────────────────────${NC}"
     echo -e "  ${WHITE}${BOLD}COMMANDS:${NC} ${NEON_CYAN}cyberrange status${NC} | ${NEON_CYAN}start${NC} | ${NEON_CYAN}stop${NC} | ${NEON_CYAN}restart${NC} | ${NEON_CYAN}fix${NC}"
     echo -e "${NEON_CYAN}══════════════════════════════════════════════════════════════════════════════${NC}"
     echo ""
@@ -653,40 +649,6 @@ generate_dashboard() {
         </div>
     </div>
 
-    <!-- SOAR Layer -->
-    <div class="section-header">
-        <h2 style="color: var(--neon-purple);">⚡ SOAR — Automated Incident Response</h2>
-        <div class="section-line"></div>
-    </div>
-    <div class="grid">
-        <!-- Shuffle SOAR -->
-        <div class="lab-card" style="--accent-color: var(--neon-purple);">
-            <div>
-                <div class="card-top">
-                    <span class="card-tag">SOAR Platform</span>
-                    <span class="ping-pill">● ACTIVE :3443</span>
-                </div>
-                <div class="card-title">Shuffle SOAR</div>
-                <div class="card-desc">Security Orchestration, Automation & Response. Build playbooks to auto-block attackers, create tickets, enrich IOCs, and notify your SOC team.</div>
-                <div class="card-creds">
-                    <div class="cred-row">
-                        <span class="cred-label">Username</span>
-                        <span class="cred-val">admin</span>
-                    </div>
-                    <div class="cred-row">
-                        <span class="cred-label">Password</span>
-                        <span class="cred-val">CyberRange@123</span>
-                    </div>
-                    <div class="cred-row">
-                        <span class="cred-label">API Key</span>
-                        <span class="cred-val">cyberrange-shuffle-api-key-2024</span>
-                    </div>
-                </div>
-            </div>
-            <a class="btn-launch" href="http://__LAN_IP__:3443" target="_blank">Open Shuffle SOAR ↗</a>
-        </div>
-    </div>
-
     <!-- Quick Terminal Cheatsheet -->
     <div class="cli-box">
         <div class="cli-title">⚡ CyberRange 2.0 Terminal Cheatsheet</div>
@@ -837,7 +799,7 @@ cmd_status() {
     fi
     
     # Containers Check
-    local containers=("cyberrange_dvwa" "cyberrange_splunk" "cyberrange_suricata" "cyberrange_shuffle_frontend" "cyberrange_shuffle_backend" "cyberrange_shuffle_orborus" "cyberrange_shuffle_db")
+    local containers=("cyberrange_dvwa" "cyberrange_splunk" "cyberrange_suricata")
     for c in "${containers[@]}"; do
         local status
         status=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo "not running")
